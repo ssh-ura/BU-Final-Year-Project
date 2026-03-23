@@ -1,4 +1,5 @@
 import os
+import re
 from functools import wraps
 from flask import Flask, render_template, redirect, url_for, request, flash, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -84,6 +85,14 @@ def register():
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         invite_code = request.form.get("invite_code", "").strip()
+
+        if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
+            flash("Please enter a valid email address.", "error")
+            return render_template("register.html")
+        if len(password) < 8:
+            flash("Password must be at least 8 characters.", "error")
+            return render_template("register.html")
+
         adviser_code = os.getenv("ADVISER_CODE", "")
         role = "adviser" if adviser_code and invite_code == adviser_code else "client"
         if User.query.filter_by(email=email).first():
