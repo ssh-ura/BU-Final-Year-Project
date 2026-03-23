@@ -78,25 +78,25 @@ def logout():
 @app.route("/portal")
 @login_required
 def portal():
-    return render_template("portal.html")
+    return render_template("client-portal.html")
 
 
 @app.route("/forms")
 @login_required
 def forms():
-    return render_template("forms.html")
+    return render_template("digital-forms.html")
 
 
 @app.route("/workflow")
 @login_required
 def workflow():
-    return render_template("workflow.html")
+    return render_template("automated-workflow.html")
 
 
-@app.route("/compliance")
+@app.route("/audit-log")
 @login_required
 def compliance():
-    return render_template("compliance.html")
+    return render_template("audit-log.html")
 
 
 @app.route("/renewals")
@@ -108,7 +108,7 @@ def renewals():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    return render_template("dashboard.html")
+    return render_template("client-dashboard.html")
 
 
 if __name__ == "__main__":
