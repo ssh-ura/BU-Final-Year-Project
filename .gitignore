@@ -1,3 +1,4 @@
+# Python
 instance/
 __pycache__/
 *.pyc
@@ -7,3 +8,7 @@ venv/
 .venv/
 *.db
 *.sqlite3
+
+# Mac OS    
+.DS_Store
+**/.DS_Store

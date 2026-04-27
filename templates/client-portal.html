@@ -1,5 +1,47 @@
 {% extends "base.html" %}
 {% block title %}Client Portal — Mortgage Hive{% endblock %}
 {% block content %}
-<h1>Client Portal</h1>
+<div class="container py-4">
+    <h1 class="mb-4">Welcome {{ current_user.email }}</h1>
+    <div class="row justify-content-center">
+        <div class="col-lg-12">
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title text-muted small mb-3">Your Next Steps</h5>
+                    <div class="p-2 rounded bg-primary bg-opacity-10 d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="mb-0"><span class="badge rounded-circle bg-primary me-2">1</span>Complete your fact find</p>
+                            <p class="text-muted small mb-0 mt-1">Tell us about yourself, your employment, income, and the property you're looking to purchase.</p>
+                        </div>
+                        <button class="btn btn-primary btn-sm ms-3">Start Fact Find</button>
+                    </div>
+                    <hr>
+                    <div class="opacity-50 d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="mb-0"><span class="badge rounded-circle bg-secondary me-2">2</span>Upload your documents</p>
+                            <p class="text-muted small mb-0 mt-1">ID, proof of address, payslips, and bank statements.</p>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm ms-3" disabled>Start</button>
+                    </div>
+                    <hr>
+                    <div class="opacity-50 d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="mb-0"><span class="badge rounded-circle bg-secondary me-2">3</span>Sign your documents</p>
+                            <p class="text-muted small mb-0 mt-1">E-sign your terms of business and fee agreement.</p>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm ms-3" disabled>Start</button>
+                    </div>
+                    <hr>
+                    <div class="opacity-50 d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="mb-0"><span class="badge rounded-circle bg-secondary me-2">4</span>Adviser review</p>
+                            <p class="text-muted small mb-0 mt-1">Your adviser will review your case and be in touch with recommendations.</p>
+                        </div>
+                        <button class="btn btn-outline-secondary btn-sm ms-3" disabled>Start</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}
