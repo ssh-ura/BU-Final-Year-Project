@@ -8,37 +8,48 @@
             <div class="card">
                 <div class="card-body">
                     <h5 class="card-title text-muted small mb-3">Your Next Steps</h5>
+                    {% set steps = [
+                        ("Complete your fact find", "Tell us about yourself, your employment, income, and the property you're looking to purchase.", "Start Fact Find", "fact_find"),
+                        ("Upload your documents", "ID, proof of address, payslips, and bank statements.", "Start Upload", "upload_documents"),
+                        ("Sign your documents", "E-sign your terms of business and fee agreement.", "Start E-Sign", "esign"),
+                        ("Adviser review", "Your adviser will review your case and be in touch with recommendations.", "", "")
+                    ] %}
+                    {% for title, description, btn_label, route in steps %}
+                    {% set n = loop.index %}
+                    {% if n < step %}
+                    {# Completed #}
+                    <div class="p-2 rounded bg-success bg-opacity-10 d-flex justify-content-between align-items-center">
+                        <div>
+                            <p class="mb-0"><span class="badge rounded-circle bg-success me-2">✓</span>{{ title }}</p>
+                            <p class="text-muted small mb-0 mt-1">{{ description }}</p>
+                        </div>
+                        <span class="badge bg-success ms-3">Done</span>
+                    </div>
+                    {% elif n == step %}
+                    {# Active #}
                     <div class="p-2 rounded bg-primary bg-opacity-10 d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="mb-0"><span class="badge rounded-circle bg-primary me-2">1</span>Complete your fact find</p>
-                            <p class="text-muted small mb-0 mt-1">Tell us about yourself, your employment, income, and the property you're looking to purchase.</p>
+                            <p class="mb-0"><span class="badge rounded-circle bg-primary me-2">{{ n }}</span>{{ title }}</p>
+                            <p class="text-muted small mb-0 mt-1">{{ description }}</p>
                         </div>
-                        <button class="btn btn-primary btn-sm ms-3">Start Fact Find</button>
+                        {% if btn_label %}
+                        <a href="{{ url_for(route) }}" class="btn btn-primary btn-sm ms-3">{{ btn_label }}</a>
+                        {% endif %}
                     </div>
-                    <hr>
-                    <div class="opacity-50 d-flex justify-content-between align-items-center">
+                    {% else %}
+                    {# Locked #}
+                    <div class="p-2 rounded opacity-50 d-flex justify-content-between align-items-center">
                         <div>
-                            <p class="mb-0"><span class="badge rounded-circle bg-secondary me-2">2</span>Upload your documents</p>
-                            <p class="text-muted small mb-0 mt-1">ID, proof of address, payslips, and bank statements.</p>
+                            <p class="mb-0"><span class="badge rounded-circle bg-secondary me-2">{{ n }}</span>{{ title }}</p>
+                            <p class="text-muted small mb-0 mt-1">{{ description }}</p>
                         </div>
-                        <button class="btn btn-outline-secondary btn-sm ms-3" disabled>Start</button>
+                        {% if btn_label %}
+                        <span class="btn btn-outline-secondary btn-sm ms-3 disabled">{{ btn_label }}</span>
+                        {% endif %}
                     </div>
-                    <hr>
-                    <div class="opacity-50 d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="mb-0"><span class="badge rounded-circle bg-secondary me-2">3</span>Sign your documents</p>
-                            <p class="text-muted small mb-0 mt-1">E-sign your terms of business and fee agreement.</p>
-                        </div>
-                        <button class="btn btn-outline-secondary btn-sm ms-3" disabled>Start</button>
-                    </div>
-                    <hr>
-                    <div class="opacity-50 d-flex justify-content-between align-items-center">
-                        <div>
-                            <p class="mb-0"><span class="badge rounded-circle bg-secondary me-2">4</span>Adviser review</p>
-                            <p class="text-muted small mb-0 mt-1">Your adviser will review your case and be in touch with recommendations.</p>
-                        </div>
-                        <button class="btn btn-outline-secondary btn-sm ms-3" disabled>Start</button>
-                    </div>
+                    {% endif %}
+                    {% if not loop.last %}<hr>{% endif %}
+                    {% endfor %}
                 </div>
             </div>
         </div>

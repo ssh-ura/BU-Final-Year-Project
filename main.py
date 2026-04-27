@@ -4,7 +4,7 @@ from functools import wraps
 from flask import Flask, render_template, redirect, url_for, request, flash, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from dotenv import load_dotenv
-from models import db, User
+from models import db, User, FactFind, Document
 
 load_dotenv()
 
@@ -118,7 +118,41 @@ def logout():
 @login_required
 @client_required
 def portal():
-    return render_template("client-portal.html")
+    fact_find_done = FactFind.query.filter_by(user_id=current_user.id).first() is not None
+    docs_done = Document.query.filter_by(user_id=current_user.id).count() >= 4
+    esign_done = current_user.esigned
+
+    if esign_done:
+        step = 4
+    elif docs_done:
+        step = 3
+    elif fact_find_done:
+        step = 2
+    else:
+        step = 1
+
+    return render_template("client-portal.html", step=step)
+
+
+@app.route("/fact-find")
+@login_required
+@client_required
+def fact_find():
+    return render_template("fact-find.html")
+
+
+@app.route("/upload-documents")
+@login_required
+@client_required
+def upload_documents():
+    return render_template("upload-documents.html")
+
+
+@app.route("/e-sign")
+@login_required
+@client_required
+def esign():
+    return render_template("e-sign.html")
 
 
 @app.route("/forms")
