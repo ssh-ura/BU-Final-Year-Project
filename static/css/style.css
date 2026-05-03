@@ -1,3 +1,14 @@
 body {
     background-color: #f8f9fa;
 }
+
+.fact-find-step-circle {
+    width: 2.25rem;
+    height: 2.25rem;
+}
+
+.fact-find-step-divider {
+    height: 2px;
+    width: 2rem;
+    background: #dee2e6;
+}

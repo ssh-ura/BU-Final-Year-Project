@@ -1,5 +1,176 @@
 {% extends "base.html" %}
-{% block title %}Digital Forms — Mortgage Hive{% endblock %}
+{% block title %}Fact Find — Mortgage Hive{% endblock %}
+
+{% set step_labels = ["Personal", "Employment", "Income", "Property"] %}
+
+{% macro step_pill(n) %}
+    {% set is_current = (n == step) %}
+    <div class="d-flex flex-column align-items-center flex-grow-1">
+        <div class="fact-find-step-circle rounded-circle d-flex align-items-center justify-content-center fw-semibold {% if is_current %}bg-dark text-white{% else %}bg-light text-muted border{% endif %}">{{ n }}</div>
+        <small class="mt-1 {% if is_current %}fw-semibold{% else %}text-muted{% endif %}">{{ step_labels[n - 1] }}</small>
+    </div>
+{% endmacro %}
+
 {% block content %}
-<h1>Digital Forms</h1>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="h3 mb-4">Fact Find</h1>
+
+                <div class="d-flex align-items-start mb-4">
+                    {{ step_pill(1) }}
+                    <div class="fact-find-step-divider flex-grow-0 mt-3"></div>
+                    {{ step_pill(2) }}
+                    <div class="fact-find-step-divider flex-grow-0 mt-3"></div>
+                    {{ step_pill(3) }}
+                    <div class="fact-find-step-divider flex-grow-0 mt-3"></div>
+                    {{ step_pill(4) }}
+                </div>
+
+                <form method="POST" action="{{ url_for('fact_find', step=step) }}">
+                    {% if step == 1 %}
+                        <h2 class="h5 mb-3">Personal details</h2>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="first_name" class="form-label">First name</label>
+                                <input type="text" class="form-control" id="first_name" name="first_name"
+                                       value="{% if fact_find %}{{ fact_find.first_name or '' }}{% endif %}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="last_name" class="form-label">Last name</label>
+                                <input type="text" class="form-control" id="last_name" name="last_name"
+                                       value="{% if fact_find %}{{ fact_find.last_name or '' }}{% endif %}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="date_of_birth" class="form-label">Date of birth</label>
+                                <input type="date" class="form-control" id="date_of_birth" name="date_of_birth"
+                                       value="{% if fact_find and fact_find.date_of_birth %}{{ fact_find.date_of_birth.isoformat() }}{% endif %}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="phone_number" class="form-label">Phone number</label>
+                                <input type="tel" class="form-control" id="phone_number" name="phone_number"
+                                       value="{% if fact_find %}{{ fact_find.phone_number or '' }}{% endif %}" required>
+                            </div>
+                            <div class="col-12">
+                                <label for="current_address" class="form-label">Current address</label>
+                                <input type="text" class="form-control" id="current_address" name="current_address"
+                                       value="{% if fact_find %}{{ fact_find.current_address or '' }}{% endif %}" required>
+                            </div>
+                        </div>
+
+                    {% elif step == 2 %}
+                        <h2 class="h5 mb-3">Employment</h2>
+                        <div class="mb-3">
+                            <label class="form-label d-block">Employment status</label>
+                            {% for option in ["Employed", "Self-employed", "Contractor", "Retired"] %}
+                                <div class="form-check form-check-inline">
+                                    <input class="form-check-input" type="radio" name="employment_status"
+                                           id="status_{{ loop.index }}" value="{{ option }}"
+                                           {% if fact_find and fact_find.employment_status == option %}checked{% endif %} required>
+                                    <label class="form-check-label" for="status_{{ loop.index }}">{{ option }}</label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="employer_name" class="form-label">Employer name</label>
+                                <input type="text" class="form-control" id="employer_name" name="employer_name"
+                                       value="{% if fact_find %}{{ fact_find.employer_name or '' }}{% endif %}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="job_title" class="form-label">Job title</label>
+                                <input type="text" class="form-control" id="job_title" name="job_title"
+                                       value="{% if fact_find %}{{ fact_find.job_title or '' }}{% endif %}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="start_date" class="form-label">Start date</label>
+                                <input type="date" class="form-control" id="start_date" name="start_date"
+                                       value="{% if fact_find and fact_find.start_date %}{{ fact_find.start_date.isoformat() }}{% endif %}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="contract_type" class="form-label">Contract type</label>
+                                <select class="form-select" id="contract_type" name="contract_type" required>
+                                    <option value="" disabled {% if not fact_find or not fact_find.contract_type %}selected{% endif %}>Choose…</option>
+                                    {% for option in ["Permanent", "Fixed-term", "Temporary", "Zero-hours"] %}
+                                        <option value="{{ option }}" {% if fact_find and fact_find.contract_type == option %}selected{% endif %}>{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                    {% elif step == 3 %}
+                        <h2 class="h5 mb-3">Income</h2>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="annual_salary" class="form-label">Annual salary (£)</label>
+                                <input type="number" step="0.01" min="0" class="form-control"
+                                       id="annual_salary" name="annual_salary"
+                                       value="{% if fact_find and fact_find.annual_salary is not none %}{{ fact_find.annual_salary }}{% endif %}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="additional_income" class="form-label">Additional income (£, optional)</label>
+                                <input type="number" step="0.01" min="0" class="form-control"
+                                       id="additional_income" name="additional_income"
+                                       value="{% if fact_find and fact_find.additional_income is not none %}{{ fact_find.additional_income }}{% endif %}">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="monthly_outgoings" class="form-label">Monthly outgoings (£)</label>
+                                <input type="number" step="0.01" min="0" class="form-control"
+                                       id="monthly_outgoings" name="monthly_outgoings"
+                                       value="{% if fact_find and fact_find.monthly_outgoings is not none %}{{ fact_find.monthly_outgoings }}{% endif %}" required>
+                            </div>
+                        </div>
+
+                    {% elif step == 4 %}
+                        <h2 class="h5 mb-3">Property</h2>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="property_type" class="form-label">Property type</label>
+                                <select class="form-select" id="property_type" name="property_type" required>
+                                    <option value="" disabled {% if not fact_find or not fact_find.property_type %}selected{% endif %}>Choose…</option>
+                                    {% for option in ["House", "Flat", "Bungalow"] %}
+                                        <option value="{{ option }}" {% if fact_find and fact_find.property_type == option %}selected{% endif %}>{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="mortgage_type" class="form-label">Mortgage type</label>
+                                <select class="form-select" id="mortgage_type" name="mortgage_type" required>
+                                    <option value="" disabled {% if not fact_find or not fact_find.mortgage_type %}selected{% endif %}>Choose…</option>
+                                    {% for option in ["Repayment", "Interest only"] %}
+                                        <option value="{{ option }}" {% if fact_find and fact_find.mortgage_type == option %}selected{% endif %}>{{ option }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="purchase_price" class="form-label">Purchase price (£)</label>
+                                <input type="number" step="0.01" min="0" class="form-control"
+                                       id="purchase_price" name="purchase_price"
+                                       value="{% if fact_find and fact_find.purchase_price is not none %}{{ fact_find.purchase_price }}{% endif %}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="deposit_amount" class="form-label">Deposit amount (£)</label>
+                                <input type="number" step="0.01" min="0" class="form-control"
+                                       id="deposit_amount" name="deposit_amount"
+                                       value="{% if fact_find and fact_find.deposit_amount is not none %}{{ fact_find.deposit_amount }}{% endif %}" required>
+                            </div>
+                        </div>
+                    {% endif %}
+
+                    <div class="d-flex justify-content-between mt-4">
+                        {% if step > 1 %}
+                            <a href="{{ url_for('fact_find', step=step - 1) }}" class="btn btn-outline-secondary">Back</a>
+                        {% else %}
+                            <a href="{{ url_for('portal') }}" class="btn btn-outline-secondary">Back to portal</a>
+                        {% endif %}
+                        <button type="submit" class="btn btn-dark">
+                            {% if step == 4 %}Submit fact find{% else %}Continue{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 {% endblock %}

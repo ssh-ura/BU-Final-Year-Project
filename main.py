@@ -1,5 +1,6 @@
 import os
 import re
+from datetime import datetime, timezone
 from functools import wraps
 from flask import Flask, render_template, redirect, url_for, request, flash, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -118,7 +119,8 @@ def logout():
 @login_required
 @client_required
 def portal():
-    fact_find_done = FactFind.query.filter_by(user_id=current_user.id).first() is not None
+    fact_find = FactFind.query.filter_by(user_id=current_user.id).first()
+    fact_find_done = fact_find is not None and fact_find.is_complete
     docs_done = Document.query.filter_by(user_id=current_user.id).count() >= 4
     esign_done = current_user.esigned
 
@@ -134,11 +136,142 @@ def portal():
     return render_template("client-portal.html", step=step)
 
 
-@app.route("/fact-find")
+EMPLOYMENT_STATUSES = {"Employed", "Self-employed", "Contractor", "Retired"}
+CONTRACT_TYPES = {"Permanent", "Fixed-term", "Temporary", "Zero-hours"}
+PROPERTY_TYPES = {"House", "Flat", "Bungalow"}
+MORTGAGE_TYPES = {"Repayment", "Interest only"}
+
+
+def _parse_date(value):
+    return datetime.strptime(value, "%Y-%m-%d").date()
+
+
+def _parse_money(value):
+    amount = float(value)
+    if amount < 0:
+        raise ValueError
+    return amount
+
+
+def _apply_step(fact_find, step, form):
+    def get(field):
+        return form.get(field, "").strip()
+
+    if step == 1:
+        first_name = get("first_name")
+        last_name = get("last_name")
+        dob_raw = get("date_of_birth")
+        phone = get("phone_number")
+        address = get("current_address")
+        if not all([first_name, last_name, dob_raw, phone, address]):
+            return "Please fill in every field before continuing."
+        try:
+            dob = _parse_date(dob_raw)
+        except ValueError:
+            return "Please enter a valid date of birth."
+        fact_find.first_name = first_name
+        fact_find.last_name = last_name
+        fact_find.date_of_birth = dob
+        fact_find.phone_number = phone
+        fact_find.current_address = address
+        return None
+
+    if step == 2:
+        status = get("employment_status")
+        employer = get("employer_name")
+        job_title = get("job_title")
+        start_raw = get("start_date")
+        contract = get("contract_type")
+        if status not in EMPLOYMENT_STATUSES:
+            return "Please select an employment status."
+        if not all([employer, job_title, start_raw]):
+            return "Please fill in every field before continuing."
+        if contract not in CONTRACT_TYPES:
+            return "Please choose a contract type."
+        try:
+            start = _parse_date(start_raw)
+        except ValueError:
+            return "Please enter a valid start date."
+        fact_find.employment_status = status
+        fact_find.employer_name = employer
+        fact_find.job_title = job_title
+        fact_find.start_date = start
+        fact_find.contract_type = contract
+        return None
+
+    if step == 3:
+        try:
+            salary = _parse_money(get("annual_salary"))
+            additional = _parse_money(get("additional_income") or "0")
+            outgoings = _parse_money(get("monthly_outgoings"))
+        except ValueError:
+            return "Please enter valid, non-negative figures for income and outgoings."
+        fact_find.annual_salary = salary
+        fact_find.additional_income = additional
+        fact_find.monthly_outgoings = outgoings
+        return None
+
+    if step == 4:
+        prop = get("property_type")
+        mortgage = get("mortgage_type")
+        if prop not in PROPERTY_TYPES:
+            return "Please choose a property type."
+        if mortgage not in MORTGAGE_TYPES:
+            return "Please choose a mortgage type."
+        try:
+            price = _parse_money(get("purchase_price"))
+            deposit = _parse_money(get("deposit_amount"))
+        except ValueError:
+            return "Please enter valid, non-negative figures for price and deposit."
+        if deposit > price:
+            return "Deposit cannot exceed the purchase price."
+        fact_find.property_type = prop
+        fact_find.purchase_price = price
+        fact_find.deposit_amount = deposit
+        fact_find.mortgage_type = mortgage
+        return None
+
+    return "Invalid step"
+
+
+@app.route("/fact-find", methods=["GET", "POST"])
 @login_required
 @client_required
 def fact_find():
-    return render_template("fact-find.html")
+    fact_find = FactFind.query.filter_by(user_id=current_user.id).first()
+
+    if request.method == "GET" and "step" not in request.args:
+        resume = fact_find.current_step if fact_find and not fact_find.is_complete else 1
+        return redirect(url_for("fact_find", step=resume))
+
+    try:
+        step = int(request.args.get("step", 1))
+    except ValueError:
+        step = 1
+    step = max(1, min(4, step))
+
+    if request.method == "POST":
+        if fact_find is None:
+            fact_find = FactFind(user_id=current_user.id, current_step=1)
+            db.session.add(fact_find)
+
+        error = _apply_step(fact_find=fact_find, step=step, form=request.form)
+        if error:
+            flash(error, "error")
+            return render_template("digital-forms.html", step=step, fact_find=fact_find)
+
+        if step == 4:
+            fact_find.is_complete = True
+            fact_find.current_step = 4
+            fact_find.submitted_at = datetime.now(timezone.utc)
+            db.session.commit()
+            return redirect(url_for("portal"))
+
+        fact_find.current_step = max(fact_find.current_step or 1, step + 1)
+        db.session.commit()
+        return redirect(url_for("fact_find", step=step + 1))
+
+    return render_template("digital-forms.html", step=step, fact_find=fact_find)
 
 
 @app.route("/upload-documents")
@@ -159,7 +292,7 @@ def esign():
 @login_required
 @adviser_required
 def forms():
-    return render_template("digital-forms.html")
+    return render_template("adviser-forms.html")
 
 
 @app.route("/workflow")
