@@ -2,10 +2,12 @@ import os
 import re
 from datetime import datetime, timezone
 from functools import wraps
-from flask import Flask, render_template, redirect, url_for, request, flash, abort
+from flask import Flask, render_template, redirect, url_for, request, flash, abort, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from dotenv import load_dotenv
-from models import db, User, FactFind, Document
+from models import db, User, FactFind, Document, DOCUMENT_CATEGORIES, DOCUMENT_CATEGORY_KEYS
+import audit
+import storage
 
 load_dotenv()
 
@@ -19,7 +21,6 @@ db.init_app(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
 login_manager.login_message_category = "error"
-
 
 @login_manager.user_loader
 def load_user(user_id):
@@ -121,7 +122,10 @@ def logout():
 def portal():
     fact_find = FactFind.query.filter_by(user_id=current_user.id).first()
     fact_find_done = fact_find is not None and fact_find.is_complete
-    docs_done = Document.query.filter_by(user_id=current_user.id).count() >= 4
+    uploaded_categories = set()
+    for document in Document.query.filter_by(user_id=current_user.id).all():
+        uploaded_categories.add(document.category)
+    docs_done = DOCUMENT_CATEGORY_KEYS.issubset(uploaded_categories)
     esign_done = current_user.esigned
 
     if esign_done:
@@ -278,7 +282,118 @@ def fact_find():
 @login_required
 @client_required
 def upload_documents():
-    return render_template("upload-documents.html")
+    documents = Document.query.filter_by(user_id=current_user.id).order_by(Document.uploaded_at.desc()).all()
+    documents_by_category = {key: [] for key, _, _ in DOCUMENT_CATEGORIES}
+    for doc in documents:
+        documents_by_category.setdefault(doc.category, []).append(doc)
+    return render_template(
+        "upload-documents.html",
+        categories=DOCUMENT_CATEGORIES,
+        documents_by_category=documents_by_category,
+        is_locked=current_user.esigned,
+        max_size_mb=storage.MAX_SIZE_MB,
+        allowed_extensions=sorted(storage.ALLOWED_EXTENSIONS),
+    )
+
+
+@app.route("/upload-documents/<category>", methods=["POST"])
+@login_required
+@client_required
+def upload_document(category):
+    if category not in DOCUMENT_CATEGORY_KEYS:
+        abort(404)
+    if current_user.esigned:
+        flash("Your case is under adviser review. Documents are read-only.", "error")
+        return redirect(url_for("upload_documents"))
+
+    file_storage = request.files.get("file")
+    try:
+        meta = storage.save_upload(file_storage, current_user.id)
+    except storage.UploadError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("upload_documents"))
+
+    document = Document(
+        user_id=current_user.id,
+        category=category,
+        original_filename=meta["original_filename"],
+        stored_filename=meta["stored_filename"],
+        mime_type=meta["mime_type"],
+        size_bytes=meta["size_bytes"],
+        sha256=meta["sha256"],
+    )
+    db.session.add(document)
+    db.session.flush()
+    audit.log_event(
+        "document_uploaded",
+        user_id=current_user.id,
+        target_type="document",
+        target_id=document.id,
+        category=category,
+        original_filename=meta["original_filename"],
+        sha256=meta["sha256"],
+        size_bytes=meta["size_bytes"],
+    )
+    db.session.commit()
+    flash("Document uploaded.", "success")
+    return redirect(url_for("upload_documents"))
+
+
+@app.route("/upload-documents/<int:doc_id>/delete", methods=["POST"])
+@login_required
+@client_required
+def delete_document(doc_id):
+    document = db.session.get(Document, doc_id)
+    if document is None or document.user_id != current_user.id:
+        abort(404)
+    if current_user.esigned:
+        flash("Your case is under adviser review. Documents are read-only.", "error")
+        return redirect(url_for("upload_documents"))
+
+    storage.delete_upload(document.user_id, document.stored_filename)
+    audit.log_event(
+        "document_deleted",
+        user_id=current_user.id,
+        target_type="document",
+        target_id=document.id,
+        category=document.category,
+        original_filename=document.original_filename,
+        sha256=document.sha256,
+    )
+    db.session.delete(document)
+    db.session.commit()
+    flash("Document deleted.", "success")
+    return redirect(url_for("upload_documents"))
+
+
+@app.route("/upload-documents/<int:doc_id>/download")
+@login_required
+def download_document(doc_id):
+    document = db.session.get(Document, doc_id)
+    if document is None:
+        abort(404)
+    is_owner = current_user.id == document.user_id
+    is_adviser = current_user.role == "adviser"
+    if not (is_owner or is_adviser):
+        abort(403)
+
+    audit.log_event(
+        "document_downloaded",
+        user_id=current_user.id,
+        target_type="document",
+        target_id=document.id,
+        category=document.category,
+        downloader_role=current_user.role,
+    )
+    db.session.commit()
+
+    full_path = storage.upload_path(document.user_id, document.stored_filename)
+    return send_from_directory(
+        full_path.parent,
+        document.stored_filename,
+        as_attachment=True,
+        download_name=document.original_filename,
+    )
 
 
 @app.route("/e-sign")

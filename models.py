@@ -54,8 +54,34 @@ class FactFind(db.Model):
     submitted_at = db.Column(db.DateTime)
 
 
+DOCUMENT_CATEGORIES = [
+    ("id", "ID", "Passport, driving licence, or national ID."),
+    ("proof_of_address", "Proof of Address", "Utility bill or council-tax letter from the last 3 months."),
+    ("payslip", "Payslip", "Most recent payslip (PDF or photo)."),
+    ("bank_statement", "Bank Statement", "Most recent bank statement (PDF or photo)."),
+]
+DOCUMENT_CATEGORY_KEYS = {key for key, _, _ in DOCUMENT_CATEGORIES}
+
+
 class Document(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
-    filename = db.Column(db.String(255), nullable=False)
+    category = db.Column(db.String(40), nullable=False)
+    original_filename = db.Column(db.String(255), nullable=False)
+    stored_filename = db.Column(db.String(255), nullable=False)
+    mime_type = db.Column(db.String(100), nullable=False)
+    size_bytes = db.Column(db.Integer, nullable=False)
+    sha256 = db.Column(db.String(64), nullable=False)
     uploaded_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+class AuditEvent(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)
+    event_type = db.Column(db.String(60), nullable=False)
+    target_type = db.Column(db.String(40))
+    target_id = db.Column(db.Integer)
+    ip_address = db.Column(db.String(45))
+    user_agent = db.Column(db.String(255))
+    metadata_json = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
