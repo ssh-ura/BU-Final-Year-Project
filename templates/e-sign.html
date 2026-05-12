@@ -1,9 +1,138 @@
 {% extends "base.html" %}
-{% block title %}E-Sign Documents — Mortgage Hive{% endblock %}
+{% block title %}Sign your documents — Mortgage Hive{% endblock %}
 {% block content %}
-<div class="container py-4">
-    <h1 class="mb-4">E-Sign Documents</h1>
-    <p>This page will contain the e-signature form.</p>
-    <a href="{{ url_for('portal') }}" class="btn btn-secondary">Back to Portal</a>
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h1 class="h3 mb-2">Sign your documents</h1>
+                <p class="text-muted">
+                    Please review both documents below, confirm you have read them, and provide your electronic signature.
+                    Your adviser cannot begin reviewing your case until this step is complete.
+                </p>
+
+                <form method="POST" action="{{ url_for('esign') }}" class="needs-validation" novalidate>
+                    <section class="mb-4">
+                        <h2 class="h5">Terms of Business</h2>
+                        <p class="mb-2">
+                            This document sets out the basis on which Mortgage Hive Ltd will provide mortgage and protection
+                            advice to you, including the scope of our service, how we are regulated, and your right to cancel.
+                        </p>
+                        <button class="btn btn-link p-0 mb-2" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#tob-full"
+                                aria-expanded="false" aria-controls="tob-full">
+                            Read full document
+                        </button>
+                        <div class="collapse mb-3" id="tob-full">
+                            <div class="border rounded p-3 bg-light small">
+                                <p>
+                                    Mortgage Hive Ltd is authorised and regulated by the Financial
+                                    Conduct Authority. We offer mortgages and protection products from a representative
+                                    panel of lenders and insurers, and the recommendations we make to you are based on
+                                    your stated needs, objectives, and circumstances as captured during the fact-find.
+                                </p>
+                                <p>
+                                    You will be advised by a qualified mortgage and protection adviser. Where a product
+                                    is recommended, we will provide a written suitability report explaining why the
+                                    product is appropriate for you and disclosing any features that may not be in your
+                                    best interest.
+                                </p>
+                                <p>
+                                    You have the right to cancel any mortgage or protection contract within the
+                                    statutory cooling-off period, which will be disclosed alongside the relevant product
+                                    documentation. Any complaints can be raised in writing to our compliance team, and
+                                    if unresolved, referred to the Financial Ombudsman Service.
+                                </p>
+                                <p class="mb-0 text-muted">
+                                    <em>This is placeholder demonstration content for a final-year university project
+                                    and is not legal advice.</em>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="tob_agreed" name="tob_agreed"
+                                   {% if tob_agreed %}checked{% endif %} required>
+                            <label class="form-check-label" for="tob_agreed">
+                                I have read and agree to the Terms of Business.
+                            </label>
+                            <div class="invalid-feedback">Please confirm you have read the Terms of Business.</div>
+                        </div>
+                    </section>
+
+                    <section class="mb-4">
+                        <h2 class="h5">Fee Agreement</h2>
+                        <p class="mb-2">
+                            This document explains how Mortgage Hive Ltd is paid for the advice we provide,
+                            including any fees payable by you and any commission we receive from lenders or insurers.
+                        </p>
+                        <button class="btn btn-link p-0 mb-2" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#fee-full"
+                                aria-expanded="false" aria-controls="fee-full">
+                            Read full document
+                        </button>
+                        <div class="collapse mb-3" id="fee-full">
+                            <div class="border rounded p-3 bg-light small">
+                                <p>
+                                    We charge a flat advice fee of £499, payable on submission of your mortgage
+                                    application to the chosen lender. If your application is declined and we cannot
+                                    place it with an alternative lender on materially similar terms, the fee is
+                                    refundable in full.
+                                </p>
+                                <p>
+                                    In addition, we will receive a procuration fee from your chosen lender on
+                                    completion of the mortgage. The amount varies by lender and product and will be
+                                    disclosed to you in writing before you commit to the application. Where a
+                                    protection product is recommended, the insurer pays us a commission, which will
+                                    also be disclosed.
+                                </p>
+                                <p>
+                                    You may cancel this agreement at any time before submission of your application
+                                    at no cost. Cancellation after submission may incur the advice fee if work has
+                                    already been carried out on your behalf.
+                                </p>
+                                <p class="mb-0 text-muted">
+                                    <em>This is placeholder demonstration content for a final-year university project
+                                    and is not legal advice.</em>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="fee_agreed" name="fee_agreed"
+                                   {% if fee_agreed %}checked{% endif %} required>
+                            <label class="form-check-label" for="fee_agreed">
+                                I have read and agree to the Fee Agreement.
+                            </label>
+                            <div class="invalid-feedback">Please confirm you have read the Fee Agreement.</div>
+                        </div>
+                    </section>
+
+                    <hr class="my-4">
+
+                    <section class="mb-4">
+                        <h2 class="h5 mb-3">Electronic signature</h2>
+                        <div class="mb-3">
+                            <label for="signature" class="form-label">Type your full name as your electronic signature</label>
+                            <input type="text" class="form-control" id="signature" name="signature"
+                                   value="{% if signature %}{{ signature }}{% endif %}" required>
+                            <div class="invalid-feedback">Please type your full name as your signature.</div>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="legally_binding" name="legally_binding"
+                                   {% if legally_binding %}checked{% endif %} required>
+                            <label class="form-check-label" for="legally_binding">
+                                I understand that typing my name above constitutes a legally binding electronic signature.
+                            </label>
+                            <div class="invalid-feedback">Please confirm you understand the signature is legally binding.</div>
+                        </div>
+                    </section>
+
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="{{ url_for('portal') }}" class="btn btn-outline-secondary">Back to portal</a>
+                        <button type="submit" class="btn btn-dark">Sign and submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

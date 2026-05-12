@@ -396,10 +396,43 @@ def download_document(doc_id):
     )
 
 
-@app.route("/e-sign")
+@app.route("/e-sign", methods=["GET", "POST"])
 @login_required
 @client_required
 def esign():
+    if current_user.esigned:
+        flash("You have already signed your documents.", "success")
+        return redirect(url_for("portal"))
+
+    if request.method == "POST":
+        tob_agreed = request.form.get("tob_agreed") == "on"
+        fee_agreed = request.form.get("fee_agreed") == "on"
+        binding_ack = request.form.get("legally_binding") == "on"
+        signature = request.form.get("signature", "").strip()
+
+        if not (tob_agreed and fee_agreed and binding_ack and signature):
+            flash("Please tick every confirmation and type your full name.", "error")
+            return render_template(
+                "e-sign.html",
+                signature=signature,
+                tob_agreed=tob_agreed,
+                fee_agreed=fee_agreed,
+                legally_binding=binding_ack,
+            )
+
+        current_user.esigned = True
+        audit.log_event(
+            "client_esigned",
+            user_id=current_user.id,
+            target_type="user",
+            target_id=current_user.id,
+            typed_name=signature,
+            documents=["Terms of Business", "Fee Agreement"],
+        )
+        db.session.commit()
+        flash("Documents signed. Your case is now under adviser review.", "success")
+        return redirect(url_for("portal"))
+
     return render_template("e-sign.html")
 
 
