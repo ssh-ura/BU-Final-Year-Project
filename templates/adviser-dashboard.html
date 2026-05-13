@@ -1,5 +1,96 @@
 {% extends "base.html" %}
 {% block title %}Dashboard — Mortgage Hive{% endblock %}
 {% block content %}
-<h1>Adviser Dashboard</h1>
+{% set stage_badge = {
+    "fact_find_in_progress": "secondary",
+    "documents_pending": "info",
+    "awaiting_esign": "warning",
+    "under_review": "primary",
+    "recommendation_issued": "primary",
+    "application_submitted": "primary",
+    "completed": "success"
+} %}
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Adviser Dashboard</h1>
+    <span class="text-muted small">
+        {{ summaries|length }}
+        {% if summaries|length == 1 %}
+            case
+        {% else %}
+            cases
+        {% endif %}
+    </span>
+</div>
+
+<form method="get" class="mb-3 d-flex align-items-center gap-2">
+    <label for="stage" class="form-label mb-0 small text-muted">Filter by stage</label>
+    <select id="stage" name="stage" class="form-select form-select-sm" style="max-width: 240px;" onchange="this.form.submit()">
+        <option value="">All stages</option>
+        {% for key, label in stage_options %}
+            {% if stage_filter == key %}
+                <option value="{{ key }}" selected>{{ label }}</option>
+            {% else %}
+                <option value="{{ key }}">{{ label }}</option>
+            {% endif %}
+        {% endfor %}
+    </select>
+    {% if stage_filter %}
+    <a href="{{ url_for('dashboard') }}" class="btn btn-link btn-sm">Clear</a>
+    {% endif %}
+</form>
+
+{% if summaries %}
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Client</th>
+                    <th>Stage</th>
+                    <th>Fact-find</th>
+                    <th>Documents</th>
+                    <th>E-signed</th>
+                    <th>Last activity</th>
+                    <th class="text-end">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for summary in summaries %}
+                <tr>
+                    <td>{{ summary.user.email }}</td>
+                    <td><span class="badge bg-{{ stage_badge.get(summary.stage, 'secondary') }}">{{ summary.stage_label }}</span></td>
+                    <td>
+                        <div class="progress" style="height: 6px; width: 80px;">
+                            <div class="progress-bar" role="progressbar" style="width: {{ summary.fact_find_percent }}%"></div>
+                        </div>
+                        <span class="small text-muted">{{ summary.fact_find_percent }}%</span>
+                    </td>
+                    <td><span class="small">{{ summary.docs_uploaded }} / {{ summary.docs_required }}</span></td>
+                    <td>
+                        {% if summary.esigned %}
+                            <span class="badge bg-success">Yes</span>
+                        {% else %}
+                            <span class="badge bg-light text-dark">No</span>
+                        {% endif %}
+                    </td>
+                    <td class="small text-muted">
+                        {% if summary.stage_updated_at %}
+                            {{ summary.stage_updated_at.strftime('%Y-%m-%d %H:%M') }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+                    <td class="text-end">
+                        <a href="{{ url_for('case_detail', user_id=summary.user.id) }}" class="btn btn-sm btn-outline-primary">Open case</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="alert alert-light text-center">No client cases yet.</div>
+{% endif %}
 {% endblock %}

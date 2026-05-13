@@ -1,3 +1,4 @@
+import json
 import os
 import re
 from datetime import datetime, timezone
@@ -5,9 +6,22 @@ from functools import wraps
 from flask import Flask, render_template, redirect, url_for, request, flash, abort, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from dotenv import load_dotenv
-from models import db, User, FactFind, Document, DOCUMENT_CATEGORIES, DOCUMENT_CATEGORY_KEYS
+from models import (
+    db,
+    User,
+    FactFind,
+    Document,
+    AuditEvent,
+    DOCUMENT_CATEGORIES,
+    DOCUMENT_CATEGORY_KEYS,
+    CASE_STAGES,
+    STAGE_LABELS,
+    ADVISER_DRIVEN_STAGES,
+    ALLOWED_TRANSITIONS,
+)
 import audit
 import storage
+import workflow
 
 load_dotenv()
 
@@ -102,6 +116,9 @@ def register():
         else:
             user = User(email=email, role=role)
             user.set_password(password)
+            if role == "client":
+                user.case_stage = "fact_find_in_progress"
+                user.stage_updated_at = datetime.now(timezone.utc)
             db.session.add(user)
             db.session.commit()
             login_user(user)
@@ -268,6 +285,16 @@ def fact_find():
             fact_find.is_complete = True
             fact_find.current_step = 4
             fact_find.submitted_at = datetime.now(timezone.utc)
+            db.session.flush()
+            audit.log_event(
+                "fact_find_submitted",
+                user_id=current_user.id,
+                target_type="fact_find",
+                target_id=fact_find.id,
+            )
+            workflow.auto_advance_if_eligible(
+                current_user, "documents_pending", actor=current_user
+            )
             db.session.commit()
             return redirect(url_for("portal"))
 
@@ -283,9 +310,13 @@ def fact_find():
 @client_required
 def upload_documents():
     documents = Document.query.filter_by(user_id=current_user.id).order_by(Document.uploaded_at.desc()).all()
-    documents_by_category = {key: [] for key, _, _ in DOCUMENT_CATEGORIES}
+    documents_by_category = {}
+    for category_key, _label, _help in DOCUMENT_CATEGORIES:
+        documents_by_category[category_key] = []
     for doc in documents:
-        documents_by_category.setdefault(doc.category, []).append(doc)
+        if doc.category not in documents_by_category:
+            documents_by_category[doc.category] = []
+        documents_by_category[doc.category].append(doc)
     return render_template(
         "upload-documents.html",
         categories=DOCUMENT_CATEGORIES,
@@ -334,6 +365,21 @@ def upload_document(category):
         sha256=meta["sha256"],
         size_bytes=meta["size_bytes"],
     )
+
+    uploaded_categories = set()
+    for document_row in Document.query.filter_by(user_id=current_user.id).all():
+        uploaded_categories.add(document_row.category)
+    if DOCUMENT_CATEGORY_KEYS.issubset(uploaded_categories):
+        audit.log_event(
+            "documents_complete",
+            user_id=current_user.id,
+            target_type="user",
+            target_id=current_user.id,
+        )
+        workflow.auto_advance_if_eligible(
+            current_user, "awaiting_esign", actor=current_user
+        )
+
     db.session.commit()
     flash("Document uploaded.", "success")
     return redirect(url_for("upload_documents"))
@@ -429,11 +475,71 @@ def esign():
             typed_name=signature,
             documents=["Terms of Business", "Fee Agreement"],
         )
+        workflow.auto_advance_if_eligible(
+            current_user, "under_review", actor=current_user
+        )
         db.session.commit()
         flash("Documents signed. Your case is now under adviser review.", "success")
         return redirect(url_for("portal"))
 
     return render_template("e-sign.html")
+
+
+FACT_FIND_STEP_FIELDS = {
+    1: ("first_name", "last_name", "date_of_birth", "phone_number", "current_address"),
+    2: ("employment_status", "employer_name", "job_title", "start_date", "contract_type"),
+    3: ("annual_salary", "monthly_outgoings"),
+    4: ("property_type", "purchase_price", "deposit_amount", "mortgage_type"),
+}
+
+
+def _fact_find_percent(fact_find):
+    if fact_find is None:
+        return 0
+    if fact_find.is_complete:
+        return 100
+    total = 0
+    for fields in FACT_FIND_STEP_FIELDS.values():
+        total += len(fields)
+    filled = 0
+    for fields in FACT_FIND_STEP_FIELDS.values():
+        for field in fields:
+            value = getattr(fact_find, field, None)
+            if value is not None and value != "":
+                filled += 1
+    return int(round(filled / total * 100))
+
+
+def _case_summary(user):
+    fact_find = FactFind.query.filter_by(user_id=user.id).first()
+    uploaded_categories = set()
+    for document in Document.query.filter_by(user_id=user.id).all():
+        uploaded_categories.add(document.category)
+
+    next_stage = ALLOWED_TRANSITIONS.get(user.case_stage)
+    if next_stage is None:
+        next_stage_label = None
+        next_stage_is_adviser_driven = False
+        can_advance = False
+    else:
+        next_stage_label = STAGE_LABELS.get(next_stage, next_stage)
+        next_stage_is_adviser_driven = next_stage in ADVISER_DRIVEN_STAGES
+        can_advance = workflow.can_advance(user, next_stage)
+
+    return {
+        "user": user,
+        "stage": user.case_stage,
+        "stage_label": STAGE_LABELS.get(user.case_stage, "—"),
+        "fact_find_percent": _fact_find_percent(fact_find),
+        "docs_uploaded": len(uploaded_categories & DOCUMENT_CATEGORY_KEYS),
+        "docs_required": len(DOCUMENT_CATEGORY_KEYS),
+        "esigned": user.esigned,
+        "stage_updated_at": user.stage_updated_at,
+        "next_stage": next_stage,
+        "next_stage_label": next_stage_label,
+        "next_stage_is_adviser_driven": next_stage_is_adviser_driven,
+        "can_advance": can_advance,
+    }
 
 
 @app.route("/forms")
@@ -446,15 +552,124 @@ def forms():
 @app.route("/workflow")
 @login_required
 @adviser_required
-def workflow():
-    return render_template("automated-workflow.html")
+def workflow_view():
+    clients = (
+        User.query.filter_by(role="client")
+        .order_by(User.stage_updated_at.desc().nullslast())
+        .all()
+    )
+    summaries = []
+    for client in clients:
+        summaries.append(_case_summary(client))
+
+    columns = []
+    for stage in CASE_STAGES:
+        cases_in_stage = []
+        for summary in summaries:
+            if summary["stage"] == stage:
+                cases_in_stage.append(summary)
+        columns.append(
+            {
+                "key": stage,
+                "label": STAGE_LABELS[stage],
+                "is_adviser_driven": stage in ADVISER_DRIVEN_STAGES,
+                "cases": cases_in_stage,
+            }
+        )
+    return render_template("automated-workflow.html", columns=columns)
 
 
 @app.route("/audit-log")
 @login_required
 @adviser_required
 def compliance():
-    return render_template("audit-log.html")
+    filter_user_id = request.args.get("user_id", type=int)
+    try:
+        page = max(1, int(request.args.get("page", 1)))
+    except ValueError:
+        page = 1
+    per_page = 50
+
+    query = AuditEvent.query
+    if filter_user_id is not None:
+        query = query.filter(
+            (AuditEvent.user_id == filter_user_id)
+            | ((AuditEvent.target_type == "user") & (AuditEvent.target_id == filter_user_id))
+            | ((AuditEvent.target_type == "fact_find") & (AuditEvent.user_id == filter_user_id))
+            | ((AuditEvent.target_type == "document") & (AuditEvent.user_id == filter_user_id))
+        )
+    total = query.count()
+    events = (
+        query.order_by(AuditEvent.created_at.desc())
+        .limit(per_page)
+        .offset((page - 1) * per_page)
+        .all()
+    )
+
+    actor_ids = set()
+    for event in events:
+        if event.user_id:
+            actor_ids.add(event.user_id)
+
+    actors = {}
+    if actor_ids:
+        for actor in User.query.filter(User.id.in_(actor_ids)).all():
+            actors[actor.id] = actor
+
+    rows = []
+    for event in events:
+        if event.metadata_json:
+            try:
+                details = json.loads(event.metadata_json)
+            except ValueError:
+                details = {"raw": event.metadata_json}
+        else:
+            details = {}
+
+        if event.user_id in actors:
+            actor_email = actors[event.user_id].email
+        else:
+            actor_email = "—"
+
+        if event.ip_address:
+            ip_address = event.ip_address
+        else:
+            ip_address = "—"
+
+        if event.user_agent:
+            user_agent_short = event.user_agent[:60]
+        else:
+            user_agent_short = "—"
+
+        rows.append(
+            {
+                "id": event.id,
+                "created_at": event.created_at,
+                "event_type": event.event_type,
+                "actor_email": actor_email,
+                "target_type": event.target_type,
+                "target_id": event.target_id,
+                "ip_address": ip_address,
+                "user_agent": user_agent_short,
+                "details": details,
+            }
+        )
+
+    if filter_user_id is not None:
+        filter_user = db.session.get(User, filter_user_id)
+    else:
+        filter_user = None
+    total_pages = max(1, (total + per_page - 1) // per_page)
+
+    return render_template(
+        "audit-log.html",
+        rows=rows,
+        page=page,
+        total_pages=total_pages,
+        total=total,
+        filter_user_id=filter_user_id,
+        filter_user=filter_user,
+    )
 
 
 @app.route("/renewals")
@@ -468,7 +683,119 @@ def renewals():
 @login_required
 @adviser_required
 def dashboard():
-    return render_template("adviser-dashboard.html")
+    stage_filter = request.args.get("stage")
+    if stage_filter not in CASE_STAGES:
+        stage_filter = None
+
+    query = User.query.filter_by(role="client")
+    if stage_filter:
+        query = query.filter_by(case_stage=stage_filter)
+    clients = query.order_by(User.stage_updated_at.desc().nullslast()).all()
+
+    summaries = []
+    for client in clients:
+        summaries.append(_case_summary(client))
+
+    stage_options = []
+    for stage_key in CASE_STAGES:
+        stage_options.append((stage_key, STAGE_LABELS[stage_key]))
+    return render_template(
+        "adviser-dashboard.html",
+        summaries=summaries,
+        stage_options=stage_options,
+        stage_filter=stage_filter,
+    )
+
+
+@app.route("/case/<int:user_id>")
+@login_required
+@adviser_required
+def case_detail(user_id):
+    client = db.session.get(User, user_id)
+    if client is None or client.role != "client":
+        abort(404)
+
+    audit.log_event(
+        "adviser_viewed_case",
+        user_id=current_user.id,
+        target_type="user",
+        target_id=client.id,
+    )
+    db.session.commit()
+
+    fact_find = FactFind.query.filter_by(user_id=client.id).first()
+    documents = (
+        Document.query.filter_by(user_id=client.id)
+        .order_by(Document.uploaded_at.desc())
+        .all()
+    )
+
+    docs_by_category = {}
+    for category_key, _label, _help in DOCUMENT_CATEGORIES:
+        docs_by_category[category_key] = []
+    for document_row in documents:
+        if document_row.category not in docs_by_category:
+            docs_by_category[document_row.category] = []
+        docs_by_category[document_row.category].append(document_row)
+
+    timeline_events = (
+        AuditEvent.query.filter(
+            (AuditEvent.user_id == client.id)
+            | ((AuditEvent.target_type == "user") & (AuditEvent.target_id == client.id))
+            | ((AuditEvent.target_type == "fact_find") & (AuditEvent.user_id == client.id))
+            | ((AuditEvent.target_type == "document") & (AuditEvent.user_id == client.id))
+        )
+        .order_by(AuditEvent.created_at.desc())
+        .limit(50)
+        .all()
+    )
+    timeline = []
+    for event in timeline_events:
+        if event.metadata_json:
+            try:
+                details = json.loads(event.metadata_json)
+            except ValueError:
+                details = {}
+        else:
+            details = {}
+        timeline.append(
+            {
+                "created_at": event.created_at,
+                "event_type": event.event_type,
+                "details": details,
+            }
+        )
+
+    summary = _case_summary(client)
+    return render_template(
+        "case-detail.html",
+        client=client,
+        fact_find=fact_find,
+        categories=DOCUMENT_CATEGORIES,
+        docs_by_category=docs_by_category,
+        timeline=timeline,
+        summary=summary,
+    )
+
+
+@app.route("/case/<int:user_id>/advance", methods=["POST"])
+@login_required
+@adviser_required
+def case_advance(user_id):
+    client = db.session.get(User, user_id)
+    if client is None or client.role != "client":
+        abort(404)
+
+    next_stage = request.form.get("next_stage", "")
+    try:
+        workflow.advance_stage(client, next_stage, actor=current_user)
+    except workflow.TransitionError as exc:
+        flash(str(exc), "error")
+        return redirect(url_for("case_detail", user_id=client.id))
+
+    db.session.commit()
+    flash(f"Stage advanced to {STAGE_LABELS.get(next_stage, next_stage)}.", "success")
+    return redirect(url_for("case_detail", user_id=client.id))
 
 
 if __name__ == "__main__":

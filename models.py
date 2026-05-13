@@ -11,6 +11,8 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(256), nullable=False)
     role = db.Column(db.String(20), nullable=False, default="client")  # client or adviser
     esigned = db.Column(db.Boolean, default=False)
+    case_stage = db.Column(db.String(40))
+    stage_updated_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
     def set_password(self, password):
@@ -73,6 +75,49 @@ class Document(db.Model):
     size_bytes = db.Column(db.Integer, nullable=False)
     sha256 = db.Column(db.String(64), nullable=False)
     uploaded_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
+CASE_STAGES = (
+    "fact_find_in_progress",
+    "documents_pending",
+    "awaiting_esign",
+    "under_review",
+    "recommendation_issued",
+    "application_submitted",
+    "completed",
+)
+
+STAGE_LABELS = {
+    "fact_find_in_progress": "Fact-find in progress",
+    "documents_pending": "Documents pending",
+    "awaiting_esign": "Awaiting e-sign",
+    "under_review": "Under adviser review",
+    "recommendation_issued": "Recommendation issued",
+    "application_submitted": "Application submitted to lender",
+    "completed": "Completed",
+}
+
+CLIENT_DRIVEN_STAGES = {
+    "fact_find_in_progress",
+    "documents_pending",
+    "awaiting_esign",
+}
+
+ADVISER_DRIVEN_STAGES = {
+    "under_review",
+    "recommendation_issued",
+    "application_submitted",
+    "completed",
+}
+
+ALLOWED_TRANSITIONS = {
+    "fact_find_in_progress": "documents_pending",
+    "documents_pending": "awaiting_esign",
+    "awaiting_esign": "under_review",
+    "under_review": "recommendation_issued",
+    "recommendation_issued": "application_submitted",
+    "application_submitted": "completed",
+}
 
 
 class AuditEvent(db.Model):

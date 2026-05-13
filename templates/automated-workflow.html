@@ -1,5 +1,54 @@
 {% extends "base.html" %}
 {% block title %}Automated Workflow — Mortgage Hive{% endblock %}
 {% block content %}
-<h1>Automated Workflow</h1>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1 class="mb-0">Automated Workflow</h1>
+    <span class="text-muted small">Drag-free kanban — advance via the buttons on each card.</span>
+</div>
+
+<div class="kanban d-flex gap-3 overflow-auto pb-3">
+    {% for col in columns %}
+        <div class="kanban-column flex-shrink-0" style="width: 260px;">
+            <div class="card h-100">
+                {% if col.is_adviser_driven %}
+                    <div class="card-header py-2 d-flex justify-content-between align-items-center bg-primary bg-opacity-10">
+                {% else %}
+                    <div class="card-header py-2 d-flex justify-content-between align-items-center bg-light">
+                {% endif %}
+                    <span class="fw-semibold small">{{ col.label }}</span>
+                    <span class="badge bg-secondary">{{ col.cases|length }}</span>
+                </div>
+                <div class="card-body p-2" style="min-height: 200px;">
+                    {% if col.cases %}
+                        {% for summary in col.cases %}
+                            <div class="card mb-2 shadow-sm">
+                                <div class="card-body p-2">
+                                    <a href="{{ url_for('case_detail', user_id=summary.user.id) }}" class="d-block small fw-semibold text-decoration-none">
+                                        {{ summary.user.email }}
+                                    </a>
+                                    <div class="small text-muted mb-2">
+                                        FF {{ summary.fact_find_percent }}% · Docs {{ summary.docs_uploaded }}/{{ summary.docs_required }}
+                                        {% if summary.esigned %}
+                                            · <span class="text-success">e-signed</span>
+                                        {% endif %}
+                                    </div>
+                                    {% if summary.can_advance and summary.next_stage_is_adviser_driven %}
+                                        <form method="post" action="{{ url_for('case_advance', user_id=summary.user.id) }}">
+                                            <input type="hidden" name="next_stage" value="{{ summary.next_stage }}">
+                                            <button type="submit" class="btn btn-sm btn-primary w-100">Advance →</button>
+                                        </form>
+                                    {% elif summary.next_stage and not summary.next_stage_is_adviser_driven %}
+                                        <span class="badge bg-light text-muted w-100 text-center">waiting on client</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="text-muted small text-center mt-3 mb-0">No cases</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+</div>
 {% endblock %}

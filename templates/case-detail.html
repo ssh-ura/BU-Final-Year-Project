@@ -1,0 +1,301 @@
+{% extends "base.html" %}
+{% block title %}Case — {{ client.email }}{% endblock %}
+{% block content %}
+{% set stage_badge = {
+    "fact_find_in_progress": "secondary",
+    "documents_pending": "info",
+    "awaiting_esign": "warning",
+    "under_review": "primary",
+    "recommendation_issued": "primary",
+    "application_submitted": "primary",
+    "completed": "success"
+} %}
+
+<div class="d-flex align-items-center justify-content-between mb-3">
+    <div>
+        <a href="{{ url_for('dashboard') }}" class="text-muted small text-decoration-none">← Dashboard</a>
+        <h1 class="mb-0">{{ client.email }}</h1>
+    </div>
+    <span class="badge bg-{{ stage_badge.get(summary.stage, 'secondary') }} fs-6">{{ summary.stage_label }}</span>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body py-2">
+                <div class="small text-muted">Fact-find</div>
+                <div class="fw-semibold">{{ summary.fact_find_percent }}%</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body py-2">
+                <div class="small text-muted">Documents</div>
+                <div class="fw-semibold">{{ summary.docs_uploaded }} / {{ summary.docs_required }}</div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body py-2">
+                <div class="small text-muted">E-signed</div>
+                <div class="fw-semibold">
+                    {% if summary.esigned %}
+                        Yes
+                    {% else %}
+                        No
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body py-2">
+                <div class="small text-muted">Stage updated</div>
+                <div class="fw-semibold">
+                    {% if summary.stage_updated_at %}
+                        {{ summary.stage_updated_at.strftime('%Y-%m-%d %H:%M') }}
+                    {% else %}
+                        —
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if summary.next_stage %}
+    <div class="card mb-4">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <div>
+                <div class="small text-muted">Next stage</div>
+                <div class="fw-semibold">{{ summary.stage_label }} → {{ summary.next_stage_label }}</div>
+            </div>
+            {% if summary.can_advance and summary.next_stage_is_adviser_driven %}
+                <form method="post" action="{{ url_for('case_advance', user_id=client.id) }}">
+                    <input type="hidden" name="next_stage" value="{{ summary.next_stage }}">
+                    <button type="submit" class="btn btn-primary">Advance to next stage →</button>
+                </form>
+            {% elif not summary.next_stage_is_adviser_driven %}
+                <span class="text-muted small">Waiting on client action.</span>
+            {% else %}
+                <span class="text-muted small">Prerequisites not met.</span>
+            {% endif %}
+        </div>
+    </div>
+{% endif %}
+
+<div class="row g-3">
+    <div class="col-lg-7">
+        <div class="card mb-3">
+            <div class="card-header"><strong>Fact-find</strong></div>
+            <div class="card-body">
+                {% if fact_find %}
+                    <dl class="row mb-0 small">
+                        <dt class="col-sm-5">Name</dt>
+                        <dd class="col-sm-7">{{ fact_find.first_name }} {{ fact_find.last_name }}</dd>
+
+                        <dt class="col-sm-5">Date of birth</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.date_of_birth %}
+                                {{ fact_find.date_of_birth }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5">Phone</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.phone_number %}
+                                {{ fact_find.phone_number }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5">Current address</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.current_address %}
+                                {{ fact_find.current_address }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5">Employment</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.employment_status %}
+                                {{ fact_find.employment_status }}
+                            {% else %}
+                                —
+                            {% endif %}
+                            —
+                            {% if fact_find.employer_name %}
+                                {{ fact_find.employer_name }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5">Job title</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.job_title %}
+                                {{ fact_find.job_title }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5">Start date</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.start_date %}
+                                {{ fact_find.start_date }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5">Contract</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.contract_type %}
+                                {{ fact_find.contract_type }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5">Annual salary</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.annual_salary %}
+                                £{{ '%.2f'|format(fact_find.annual_salary) }}
+                            {% else %}
+                                £0.00
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5">Additional income</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.additional_income %}
+                                £{{ '%.2f'|format(fact_find.additional_income) }}
+                            {% else %}
+                                £0.00
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5">Monthly outgoings</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.monthly_outgoings %}
+                                £{{ '%.2f'|format(fact_find.monthly_outgoings) }}
+                            {% else %}
+                                £0.00
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5">Property type</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.property_type %}
+                                {{ fact_find.property_type }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5">Purchase price</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.purchase_price %}
+                                £{{ '%.2f'|format(fact_find.purchase_price) }}
+                            {% else %}
+                                £0.00
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5">Deposit</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.deposit_amount %}
+                                £{{ '%.2f'|format(fact_find.deposit_amount) }}
+                            {% else %}
+                                £0.00
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5">Mortgage type</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.mortgage_type %}
+                                {{ fact_find.mortgage_type }}
+                            {% else %}
+                                —
+                            {% endif %}
+                        </dd>
+
+                        <dt class="col-sm-5">Submitted</dt>
+                        <dd class="col-sm-7">
+                            {% if fact_find.submitted_at %}
+                                {{ fact_find.submitted_at.strftime('%Y-%m-%d %H:%M') }} UTC
+                            {% else %}
+                                —
+                            {% endif %}
+                        </dd>
+                    </dl>
+                {% else %}
+                    <p class="text-muted small mb-0">No fact-find data yet.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header"><strong>Documents</strong></div>
+            <ul class="list-group list-group-flush">
+                {% for key, label, _ in categories %}
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold small">{{ label }}</span>
+                            {% if docs_by_category[key] %}
+                                <span class="badge bg-success">{{ docs_by_category[key]|length }}</span>
+                            {% else %}
+                                <span class="badge bg-light text-muted">missing</span>
+                            {% endif %}
+                        </div>
+                        {% for document in docs_by_category[key] %}
+                            <div class="d-flex justify-content-between mt-1 small">
+                                <a href="{{ url_for('download_document', doc_id=document.id) }}">{{ document.original_filename }}</a>
+                                <span class="text-muted">{{ document.uploaded_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                            </div>
+                        {% endfor %}
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="col-lg-5">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Audit timeline</strong>
+                <a href="{{ url_for('compliance', user_id=client.id) }}" class="small">Full log →</a>
+            </div>
+            <ul class="list-group list-group-flush" style="max-height: 600px; overflow-y: auto;">
+                {% if timeline %}
+                    {% for event in timeline %}
+                        <li class="list-group-item small">
+                            <div class="d-flex justify-content-between">
+                                <code>{{ event.event_type }}</code>
+                                <span class="text-muted">{{ event.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                            </div>
+                            {% if event.details %}
+                                <details class="mt-1">
+                                    <summary class="text-muted">details</summary>
+                                    <pre class="small bg-light p-2 mb-0 mt-1">{{ event.details|tojson(indent=2) }}</pre>
+                                </details>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                {% else %}
+                    <li class="list-group-item small text-muted text-center">No events.</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
