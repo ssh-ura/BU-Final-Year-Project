@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+{% block title %}
+    {% if mortgage %}
+        Edit mortgage — {{ client.email }}
+    {% else %}
+        Add mortgage — {{ client.email }}
+    {% endif %}
+{% endblock %}
+{% block content %}
+<div class="mb-3">
+    <a href="{{ back_url }}" class="text-muted small text-decoration-none">← Back to case</a>
+    <h1 class="mb-0">
+        {% if mortgage %}
+            Edit mortgage
+        {% else %}
+            Add mortgage
+        {% endif %}
+    </h1>
+    <p class="text-muted small mb-0">Client: {{ client.email }}</p>
+</div>
+
+<form method="post" action="{{ form_action }}" class="card p-4" style="max-width: 720px;">
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label for="lender_name" class="form-label">Lender <span class="text-danger">*</span></label>
+            <input
+                type="text"
+                id="lender_name"
+                name="lender_name"
+                class="form-control"
+                required
+                value="{% if mortgage %}{{ mortgage.lender_name }}{% endif %}"
+            >
+        </div>
+        <div class="col-md-6">
+            <label for="product_name" class="form-label">Product</label>
+            <input
+                type="text"
+                id="product_name"
+                name="product_name"
+                class="form-control"
+                placeholder="e.g. 2-Year Fixed"
+                value="{% if mortgage and mortgage.product_name %}{{ mortgage.product_name }}{% endif %}"
+            >
+        </div>
+
+        <div class="col-md-6">
+            <label for="rate_type" class="form-label">Rate type <span class="text-danger">*</span></label>
+            <select id="rate_type" name="rate_type" class="form-select" required>
+                <option value="">Select…</option>
+                {% for rate_type in rate_types %}
+                    {% if mortgage and mortgage.rate_type == rate_type %}
+                        <option value="{{ rate_type }}" selected>{{ rate_type }}</option>
+                    {% else %}
+                        <option value="{{ rate_type }}">{{ rate_type }}</option>
+                    {% endif %}
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-6">
+            <label for="rate_pct" class="form-label">Rate (%)</label>
+            <input
+                type="number"
+                id="rate_pct"
+                name="rate_pct"
+                class="form-control"
+                step="0.01"
+                min="0"
+                value="{% if mortgage and mortgage.rate_pct is not none %}{{ mortgage.rate_pct }}{% endif %}"
+            >
+        </div>
+
+        <div class="col-md-6">
+            <label for="deal_end_date" class="form-label">Deal end date <span class="text-danger">*</span></label>
+            <input
+                type="date"
+                id="deal_end_date"
+                name="deal_end_date"
+                class="form-control"
+                required
+                value="{% if mortgage %}{{ mortgage.deal_end_date.isoformat() }}{% endif %}"
+            >
+        </div>
+        <div class="col-md-6">
+            <label for="term_years" class="form-label">Original term (years)</label>
+            <input
+                type="number"
+                id="term_years"
+                name="term_years"
+                class="form-control"
+                min="0"
+                value="{% if mortgage and mortgage.term_years is not none %}{{ mortgage.term_years }}{% endif %}"
+            >
+        </div>
+
+        <div class="col-md-6">
+            <label for="monthly_payment" class="form-label">Monthly payment (£)</label>
+            <input
+                type="number"
+                id="monthly_payment"
+                name="monthly_payment"
+                class="form-control"
+                step="0.01"
+                min="0"
+                value="{% if mortgage and mortgage.monthly_payment is not none %}{{ mortgage.monthly_payment }}{% endif %}"
+            >
+        </div>
+        <div class="col-md-6">
+            <label for="balance_remaining" class="form-label">Balance remaining (£)</label>
+            <input
+                type="number"
+                id="balance_remaining"
+                name="balance_remaining"
+                class="form-control"
+                step="0.01"
+                min="0"
+                value="{% if mortgage and mortgage.balance_remaining is not none %}{{ mortgage.balance_remaining }}{% endif %}"
+            >
+        </div>
+
+        <div class="col-12">
+            <label for="notes" class="form-label">Notes</label>
+            <textarea
+                id="notes"
+                name="notes"
+                class="form-control"
+                rows="3"
+                maxlength="500"
+            >{% if mortgage and mortgage.notes %}{{ mortgage.notes }}{% endif %}</textarea>
+        </div>
+    </div>
+
+    <div class="mt-4 d-flex justify-content-between">
+        <a href="{{ back_url }}" class="btn btn-outline-secondary">Cancel</a>
+        <button type="submit" class="btn btn-primary">
+            {% if mortgage %}
+                Save changes
+            {% else %}
+                Add mortgage
+            {% endif %}
+        </button>
+    </div>
+</form>
+{% endblock %}

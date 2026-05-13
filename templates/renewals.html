@@ -1,5 +1,110 @@
 {% extends "base.html" %}
-{% block title %}Renewal Alerts — Mortgage Hive{% endblock %}
+{% block title %}Renewals — Mortgage Hive{% endblock %}
 {% block content %}
-<h1>Renewal Alerts</h1>
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="mb-0">Renewal Alerts</h1>
+    <span class="text-muted small">
+        {{ rows|length }}
+        {% if rows|length == 1 %}
+            mortgage
+        {% else %}
+            mortgages
+        {% endif %}
+    </span>
+</div>
+
+<form method="get" class="mb-3 d-flex align-items-center gap-2">
+    <label for="band" class="form-label mb-0 small text-muted">Filter by alert band</label>
+    <select id="band" name="band" class="form-select form-select-sm" style="max-width: 240px;" onchange="this.form.submit()">
+        <option value="">All bands</option>
+        {% for key, label in band_options %}
+            {% if band_filter == key %}
+                <option value="{{ key }}" selected>{{ label }}</option>
+            {% else %}
+                <option value="{{ key }}">{{ label }}</option>
+            {% endif %}
+        {% endfor %}
+    </select>
+    {% if band_filter %}
+        <a href="{{ url_for('renewals_view') }}" class="btn btn-link btn-sm">Clear</a>
+    {% endif %}
+</form>
+
+{% if rows %}
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Client</th>
+                        <th>Lender</th>
+                        <th>Product</th>
+                        <th>Rate</th>
+                        <th>Balance</th>
+                        <th>Deal end date</th>
+                        <th>Days remaining</th>
+                        <th>Alert</th>
+                        <th class="text-end">Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in rows %}
+                        <tr>
+                            <td class="small">
+                                {% if row.client %}
+                                    {{ row.client.email }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td class="small">{{ row.mortgage.lender_name }}</td>
+                            <td class="small">
+                                {% if row.mortgage.product_name %}
+                                    {{ row.mortgage.product_name }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                {{ row.mortgage.rate_type }}
+                                {% if row.mortgage.rate_pct is not none %}
+                                    · {{ row.mortgage.rate_pct }}%
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                {% if row.mortgage.balance_remaining is not none %}
+                                    £{{ '%.2f'|format(row.mortgage.balance_remaining) }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </td>
+                            <td class="small">{{ row.mortgage.deal_end_date.isoformat() }}</td>
+                            <td class="small">
+                                {% if row.days_remaining < 0 %}
+                                    expired {{ -row.days_remaining }} day{% if -row.days_remaining != 1 %}s{% endif %} ago
+                                {% else %}
+                                    {{ row.days_remaining }} day{% if row.days_remaining != 1 %}s{% endif %}
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-{{ row.band_badge }}">{{ row.band_label }}</span></td>
+                            <td class="text-end">
+                                {% if row.client %}
+                                    <a href="{{ url_for('case_detail', user_id=row.client.id) }}" class="btn btn-sm btn-outline-primary">Open case</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+{% else %}
+    <div class="alert alert-light text-center">
+        {% if band_filter %}
+            No mortgages in this alert band.
+        {% else %}
+            No mortgages on file yet. Add one from a client's case page.
+        {% endif %}
+    </div>
+{% endif %}
 {% endblock %}

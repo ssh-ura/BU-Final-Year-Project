@@ -120,6 +120,25 @@ ALLOWED_TRANSITIONS = {
 }
 
 
+MORTGAGE_RATE_TYPES = ("Fixed", "Tracker", "Variable", "Discount")
+
+
+class Mortgage(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    lender_name = db.Column(db.String(120), nullable=False)
+    product_name = db.Column(db.String(120))
+    rate_type = db.Column(db.String(20), nullable=False)
+    rate_pct = db.Column(db.Float)
+    term_years = db.Column(db.Integer)
+    monthly_payment = db.Column(db.Float)
+    balance_remaining = db.Column(db.Float)
+    deal_end_date = db.Column(db.Date, nullable=False)
+    notes = db.Column(db.String(500))
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    updated_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+
+
 class AuditEvent(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=True)

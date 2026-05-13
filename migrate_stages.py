@@ -1,9 +1,3 @@
-"""One-shot migration: add case_stage + stage_updated_at columns and backfill.
-
-Run once after pulling the workflow feature:
-
-    python migrate_stages.py
-"""
 from datetime import datetime, timezone
 
 from sqlalchemy import inspect, text

@@ -1,7 +1,7 @@
 import json
 import os
 import re
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from functools import wraps
 from flask import Flask, render_template, redirect, url_for, request, flash, abort, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
@@ -11,6 +11,7 @@ from models import (
     User,
     FactFind,
     Document,
+    Mortgage,
     AuditEvent,
     DOCUMENT_CATEGORIES,
     DOCUMENT_CATEGORY_KEYS,
@@ -18,8 +19,10 @@ from models import (
     STAGE_LABELS,
     ADVISER_DRIVEN_STAGES,
     ALLOWED_TRANSITIONS,
+    MORTGAGE_RATE_TYPES,
 )
 import audit
+import renewals
 import storage
 import workflow
 
@@ -672,11 +675,262 @@ def compliance():
     )
 
 
+def _parse_mortgage_form(form):
+    """Parse and validate mortgage form input.
+
+    Returns (data_dict, None) on success, or (None, error_message) on failure.
+    """
+    def get(field):
+        return form.get(field, "").strip()
+
+    lender_name = get("lender_name")
+    rate_type = get("rate_type")
+    deal_end_raw = get("deal_end_date")
+
+    if not lender_name:
+        return None, "Lender name is required."
+    if rate_type not in MORTGAGE_RATE_TYPES:
+        return None, "Please choose a valid rate type."
+    if not deal_end_raw:
+        return None, "Deal end date is required."
+
+    try:
+        deal_end_date = _parse_date(deal_end_raw)
+    except ValueError:
+        return None, "Please enter a valid deal end date."
+
+    product_name = get("product_name") or None
+    notes = get("notes") or None
+
+    rate_pct = None
+    term_years = None
+    monthly_payment = None
+    balance_remaining = None
+
+    rate_pct_raw = get("rate_pct")
+    if rate_pct_raw:
+        try:
+            rate_pct = float(rate_pct_raw)
+            if rate_pct < 0:
+                raise ValueError
+        except ValueError:
+            return None, "Rate percentage must be a non-negative number."
+
+    term_years_raw = get("term_years")
+    if term_years_raw:
+        try:
+            term_years = int(term_years_raw)
+            if term_years < 0:
+                raise ValueError
+        except ValueError:
+            return None, "Term must be a non-negative whole number of years."
+
+    monthly_payment_raw = get("monthly_payment")
+    if monthly_payment_raw:
+        try:
+            monthly_payment = _parse_money(monthly_payment_raw)
+        except ValueError:
+            return None, "Monthly payment must be a non-negative number."
+
+    balance_raw = get("balance_remaining")
+    if balance_raw:
+        try:
+            balance_remaining = _parse_money(balance_raw)
+        except ValueError:
+            return None, "Balance remaining must be a non-negative number."
+
+    data = {
+        "lender_name": lender_name,
+        "product_name": product_name,
+        "rate_type": rate_type,
+        "rate_pct": rate_pct,
+        "term_years": term_years,
+        "monthly_payment": monthly_payment,
+        "balance_remaining": balance_remaining,
+        "deal_end_date": deal_end_date,
+        "notes": notes,
+    }
+    return data, None
+
+
 @app.route("/renewals")
 @login_required
 @adviser_required
-def renewals():
-    return render_template("renewals.html")
+def renewals_view():
+    band_filter = request.args.get("band")
+    if band_filter not in renewals.ALERT_BANDS:
+        band_filter = None
+
+    today = date.today()
+    mortgages = (
+        Mortgage.query.order_by(Mortgage.deal_end_date.asc()).all()
+    )
+
+    client_ids = set()
+    for mortgage in mortgages:
+        client_ids.add(mortgage.user_id)
+    clients = {}
+    if client_ids:
+        for client in User.query.filter(User.id.in_(client_ids)).all():
+            clients[client.id] = client
+
+    rows = []
+    for mortgage in mortgages:
+        summary = renewals.mortgage_summary(mortgage, today)
+        if band_filter is not None and summary["band"] != band_filter:
+            continue
+        summary["client"] = clients.get(mortgage.user_id)
+        rows.append(summary)
+
+    band_options = []
+    for band in renewals.ALERT_BANDS:
+        band_options.append((band, renewals.BAND_LABELS[band]))
+
+    return render_template(
+        "renewals.html",
+        rows=rows,
+        band_filter=band_filter,
+        band_options=band_options,
+        today=today,
+    )
+
+
+@app.route("/case/<int:user_id>/mortgage/add", methods=["GET", "POST"])
+@login_required
+@adviser_required
+def mortgage_add(user_id):
+    client = db.session.get(User, user_id)
+    if client is None or client.role != "client":
+        abort(404)
+
+    if request.method == "POST":
+        data, error = _parse_mortgage_form(request.form)
+        if error:
+            flash(error, "error")
+            return render_template(
+                "mortgage-form.html",
+                client=client,
+                mortgage=None,
+                rate_types=MORTGAGE_RATE_TYPES,
+                form_action=url_for("mortgage_add", user_id=client.id),
+                back_url=url_for("case_detail", user_id=client.id),
+            )
+
+        mortgage = Mortgage(user_id=client.id, **data)
+        db.session.add(mortgage)
+        db.session.flush()
+        audit.log_event(
+            "mortgage_added",
+            user_id=current_user.id,
+            target_type="mortgage",
+            target_id=mortgage.id,
+            client_user_id=client.id,
+            lender_name=data["lender_name"],
+            rate_type=data["rate_type"],
+            deal_end_date=data["deal_end_date"].isoformat(),
+        )
+        db.session.commit()
+        flash("Mortgage added.", "success")
+        return redirect(url_for("case_detail", user_id=client.id))
+
+    return render_template(
+        "mortgage-form.html",
+        client=client,
+        mortgage=None,
+        rate_types=MORTGAGE_RATE_TYPES,
+        form_action=url_for("mortgage_add", user_id=client.id),
+        back_url=url_for("case_detail", user_id=client.id),
+    )
+
+
+@app.route("/mortgage/<int:mortgage_id>/edit", methods=["GET", "POST"])
+@login_required
+@adviser_required
+def mortgage_edit(mortgage_id):
+    mortgage = db.session.get(Mortgage, mortgage_id)
+    if mortgage is None:
+        abort(404)
+    client = db.session.get(User, mortgage.user_id)
+
+    if request.method == "POST":
+        data, error = _parse_mortgage_form(request.form)
+        if error:
+            flash(error, "error")
+            return render_template(
+                "mortgage-form.html",
+                client=client,
+                mortgage=mortgage,
+                rate_types=MORTGAGE_RATE_TYPES,
+                form_action=url_for("mortgage_edit", mortgage_id=mortgage.id),
+                back_url=url_for("case_detail", user_id=client.id),
+            )
+
+        before = {
+            "lender_name": mortgage.lender_name,
+            "rate_type": mortgage.rate_type,
+            "deal_end_date": mortgage.deal_end_date.isoformat(),
+        }
+        mortgage.lender_name = data["lender_name"]
+        mortgage.product_name = data["product_name"]
+        mortgage.rate_type = data["rate_type"]
+        mortgage.rate_pct = data["rate_pct"]
+        mortgage.term_years = data["term_years"]
+        mortgage.monthly_payment = data["monthly_payment"]
+        mortgage.balance_remaining = data["balance_remaining"]
+        mortgage.deal_end_date = data["deal_end_date"]
+        mortgage.notes = data["notes"]
+        mortgage.updated_at = datetime.now(timezone.utc)
+
+        audit.log_event(
+            "mortgage_updated",
+            user_id=current_user.id,
+            target_type="mortgage",
+            target_id=mortgage.id,
+            client_user_id=client.id,
+            before=before,
+            after={
+                "lender_name": data["lender_name"],
+                "rate_type": data["rate_type"],
+                "deal_end_date": data["deal_end_date"].isoformat(),
+            },
+        )
+        db.session.commit()
+        flash("Mortgage updated.", "success")
+        return redirect(url_for("case_detail", user_id=client.id))
+
+    return render_template(
+        "mortgage-form.html",
+        client=client,
+        mortgage=mortgage,
+        rate_types=MORTGAGE_RATE_TYPES,
+        form_action=url_for("mortgage_edit", mortgage_id=mortgage.id),
+        back_url=url_for("case_detail", user_id=client.id),
+    )
+
+
+@app.route("/mortgage/<int:mortgage_id>/delete", methods=["POST"])
+@login_required
+@adviser_required
+def mortgage_delete(mortgage_id):
+    mortgage = db.session.get(Mortgage, mortgage_id)
+    if mortgage is None:
+        abort(404)
+    client_id = mortgage.user_id
+
+    audit.log_event(
+        "mortgage_deleted",
+        user_id=current_user.id,
+        target_type="mortgage",
+        target_id=mortgage.id,
+        client_user_id=client_id,
+        lender_name=mortgage.lender_name,
+        rate_type=mortgage.rate_type,
+        deal_end_date=mortgage.deal_end_date.isoformat(),
+    )
+    db.session.delete(mortgage)
+    db.session.commit()
+    flash("Mortgage deleted.", "success")
+    return redirect(url_for("case_detail", user_id=client_id))
 
 
 @app.route("/dashboard")
@@ -767,6 +1021,17 @@ def case_detail(user_id):
         )
 
     summary = _case_summary(client)
+
+    today = date.today()
+    mortgage_rows = (
+        Mortgage.query.filter_by(user_id=client.id)
+        .order_by(Mortgage.deal_end_date.asc())
+        .all()
+    )
+    mortgages = []
+    for mortgage in mortgage_rows:
+        mortgages.append(renewals.mortgage_summary(mortgage, today))
+
     return render_template(
         "case-detail.html",
         client=client,
@@ -775,6 +1040,7 @@ def case_detail(user_id):
         docs_by_category=docs_by_category,
         timeline=timeline,
         summary=summary,
+        mortgages=mortgages,
     )
 
 

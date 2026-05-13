@@ -244,7 +244,7 @@
             </div>
         </div>
 
-        <div class="card">
+        <div class="card mb-3">
             <div class="card-header"><strong>Documents</strong></div>
             <ul class="list-group list-group-flush">
                 {% for key, label, _ in categories %}
@@ -266,6 +266,58 @@
                     </li>
                 {% endfor %}
             </ul>
+        </div>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <strong>Existing mortgages</strong>
+                <a href="{{ url_for('mortgage_add', user_id=client.id) }}" class="btn btn-sm btn-outline-primary">Add mortgage</a>
+            </div>
+            {% if mortgages %}
+                <ul class="list-group list-group-flush">
+                    {% for row in mortgages %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <div class="fw-semibold small">
+                                        {{ row.mortgage.lender_name }}
+                                        {% if row.mortgage.product_name %}
+                                           - {{ row.mortgage.product_name }}
+                                        {% endif %}
+                                    </div>
+                                    <div class="small text-muted">
+                                        {{ row.mortgage.rate_type }}
+                                        {% if row.mortgage.rate_pct is not none %}
+                                            · {{ row.mortgage.rate_pct }}%
+                                        {% endif %}
+                                        · deal ends {{ row.mortgage.deal_end_date.isoformat() }}
+                                    </div>
+                                    <div class="small mt-1">
+                                        <span class="badge bg-{{ row.band_badge }}">{{ row.band_label }}</span>
+                                        <span class="text-muted ms-1">
+                                            {% if row.days_remaining < 0 %}
+                                                expired {{ -row.days_remaining }} day{% if -row.days_remaining != 1 %}s{% endif %} ago
+                                            {% else %}
+                                                {{ row.days_remaining }} day{% if row.days_remaining != 1 %}s{% endif %} remaining
+                                            {% endif %}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-column gap-1">
+                                    <a href="{{ url_for('mortgage_edit', mortgage_id=row.mortgage.id) }}" class="btn btn-sm btn-outline-secondary">Edit</a>
+                                    <form method="post" action="{{ url_for('mortgage_delete', mortgage_id=row.mortgage.id) }}" onsubmit="return confirm('Delete this mortgage?');">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger w-100">Delete</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <div class="card-body text-muted small">
+                    No existing mortgages on file for this client.
+                </div>
+            {% endif %}
         </div>
     </div>
 
