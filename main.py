@@ -136,6 +136,21 @@ def logout():
     return redirect(url_for("login"))
 
 
+ADVISER_STAGE_ORDER = (
+    "under_review",
+    "recommendation_issued",
+    "application_submitted",
+    "completed",
+)
+
+CLIENT_STAGE_MESSAGES = {
+    "under_review": "Your adviser is reviewing your case and will be in touch with their recommendation shortly.",
+    "recommendation_issued": "Your adviser has issued a recommendation. They will contact you to discuss further.",
+    "application_submitted": "Your application has been submitted to the lender. We're now waiting on their decision.",
+    "completed": "Your case is complete. Thank you for choosing The Mortgage Hive.",
+}
+
+
 @app.route("/portal")
 @login_required
 @client_required
@@ -157,7 +172,50 @@ def portal():
     else:
         step = 1
 
-    return render_template("client-portal.html", step=step)
+    current_stage = current_user.case_stage
+    if current_stage in ADVISER_STAGE_ORDER:
+        current_stage_index = ADVISER_STAGE_ORDER.index(current_stage)
+    else:
+        current_stage_index = -1
+
+    adviser_stages = []
+    for index, stage_key in enumerate(ADVISER_STAGE_ORDER):
+        if index < current_stage_index:
+            state = "done"
+        elif index == current_stage_index:
+            state = "current"
+        else:
+            state = "future"
+        adviser_stages.append(
+            {
+                "key": stage_key,
+                "label": STAGE_LABELS[stage_key],
+                "state": state,
+            }
+        )
+
+    if current_stage in CLIENT_STAGE_MESSAGES:
+        current_stage_message = CLIENT_STAGE_MESSAGES[current_stage]
+    else:
+        current_stage_message = "Your case is awaiting adviser review."
+
+    today = date.today()
+    mortgage_rows = (
+        Mortgage.query.filter_by(user_id=current_user.id)
+        .order_by(Mortgage.deal_end_date.asc())
+        .all()
+    )
+    mortgages = []
+    for mortgage in mortgage_rows:
+        mortgages.append(renewals.mortgage_summary(mortgage, today))
+
+    return render_template(
+        "client-portal.html",
+        step=step,
+        adviser_stages=adviser_stages,
+        current_stage_message=current_stage_message,
+        mortgages=mortgages,
+    )
 
 
 EMPLOYMENT_STATUSES = {"Employed", "Self-employed", "Contractor", "Retired"}
