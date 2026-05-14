@@ -90,8 +90,20 @@ def login():
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
             login_user(user)
+            audit.log_event(
+                "user_login_succeeded",
+                user_id=user.id,
+                target_type="user",
+                target_id=user.id,
+            )
+            db.session.commit()
             next_page = request.args.get("next")
             return redirect(next_page or role_home())
+        audit.log_event(
+            "user_login_failed",
+            attempted_email=email,
+        )
+        db.session.commit()
         flash("Invalid email or password.", "error")
     return render_template("login.html")
 
@@ -123,6 +135,14 @@ def register():
                 user.case_stage = "fact_find_in_progress"
                 user.stage_updated_at = datetime.now(timezone.utc)
             db.session.add(user)
+            db.session.flush()
+            audit.log_event(
+                "user_registered",
+                user_id=user.id,
+                target_type="user",
+                target_id=user.id,
+                role=role,
+            )
             db.session.commit()
             login_user(user)
             return redirect(role_home())
@@ -132,6 +152,14 @@ def register():
 @app.route("/logout")
 @login_required
 def logout():
+    user_id = current_user.id
+    audit.log_event(
+        "user_logged_out",
+        user_id=user_id,
+        target_type="user",
+        target_id=user_id,
+    )
+    db.session.commit()
     logout_user()
     return redirect(url_for("login"))
 

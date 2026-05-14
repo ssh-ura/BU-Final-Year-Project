@@ -23,3 +23,41 @@ The script is safe to run repeatedly: it checks for the columns before `ALTER TA
 ```
 ./venv/bin/python migrate_stages.py
 ```
+
+## Run the demo
+
+`seed_demo.py` creates one adviser and four clients spread across the case-stage lifecycle, plus five mortgages spanning every renewal alert band and a believable audit trail. It only touches rows whose email matches `demo_*@example.com`, so any real dev users are left alone.
+
+To recreate the demo environment:
+
+1. Start the app once so `db.create_all()` runs:
+
+   ```
+   flask --app main run
+   ```
+
+   Press Ctrl+C once you see `Running on http://...`.
+
+2. Seed the demo data:
+
+   ```
+   ./venv/bin/python seed_demo.py --reset
+   ```
+
+   Re-running without `--reset` is idempotent — already-seeded users are left in place.
+
+3. Re-run the app:
+
+   ```
+   flask --app main run
+   ```
+
+Credentials (all use password `demo1234`):
+
+| Role | Email | Lands on |
+|---|---|---|
+| Adviser | `demo_adviser@example.com` | Dashboard with the four demo clients |
+| Client (no fact-find) | `demo_client_new@example.com` | Step 1 — Complete fact-find |
+| Client (no docs) | `demo_client_docs@example.com` | Step 2 — Upload documents |
+| Client (awaiting e-sign) | `demo_client_esign@example.com` | Step 3 — Sign documents |
+| Client (recommendation issued) | `demo_client_review@example.com` | Step 4 — Adviser progress, 5 mortgages |
