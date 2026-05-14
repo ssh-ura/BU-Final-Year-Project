@@ -7,7 +7,7 @@
             <div class="card-body p-4">
                 <h1 class="h3 mb-2">Sign your documents</h1>
                 <p class="text-muted">
-                    Please review both documents below, confirm you have read them, and provide your electronic signature.
+                    Please review the documents below, confirm you have read them and provide your electronic signature.
                     Your adviser cannot begin reviewing your case until this step is complete.
                 </p>
 
@@ -56,6 +56,74 @@
                                 I have read and agree to the Terms of Business.
                             </label>
                             <div class="invalid-feedback">Please confirm you have read the Terms of Business.</div>
+                        </div>
+                    </section>
+
+                    <section class="mb-4">
+                        <h2 class="h5">Privacy Notice</h2>
+                        <p class="mb-2">
+                            This notice explains how Mortgage Hive Ltd collects, uses and protects your personal data
+                            when providing mortgage and protection advice, in line with the UK GDPR and the Data
+                            Protection Act 2018.
+                        </p>
+                        <button class="btn btn-link p-0 mb-2" type="button"
+                                data-bs-toggle="collapse" data-bs-target="#privacy-full"
+                                aria-expanded="false" aria-controls="privacy-full">
+                            Read full document
+                        </button>
+                        <div class="collapse mb-3" id="privacy-full">
+                            <div class="border rounded p-3 bg-light small">
+                                <p>
+                                    <strong>Who we are.</strong> Mortgage Hive Ltd is the data controller for the
+                                    personal information you provide to us. You can contact our compliance team at any
+                                    time with questions about how your data is handled.
+                                </p>
+                                <p>
+                                    <strong>What we collect.</strong> Identity and contact details, employment and
+                                    income information, details of the property you intend to purchase and the
+                                    supporting documents you upload (ID, proof of address, payslips, bank statements).
+                                    We also collect information generated as your case progresses, including notes from
+                                    your adviser and records of any recommendations made.
+                                </p>
+                                <p>
+                                    <strong>Why we use it and our lawful basis.</strong> We use your data to provide the
+                                    mortgage and protection advice you have requested (performance of contract), to meet
+                                    our obligations under FCA rules and other applicable law (legal obligation) and to
+                                    prevent and detect fraud (legitimate interest).
+                                </p>
+                                <p>
+                                    <strong>Who we share it with.</strong> The lender and insurer you choose to apply
+                                    with, the Financial Conduct Authority and other regulators where required, HMRC where
+                                    we have a legal obligation to report, and anti-fraud agencies (for example CIFAS).
+                                    We do not sell your data to third parties.
+                                </p>
+                                <p>
+                                    <strong>How long we keep it.</strong> We retain mortgage and protection advice
+                                    records for at least six years after your case is closed, in line with FCA
+                                    record-keeping requirements. Some records may be retained for longer where required
+                                    by law.
+                                </p>
+                                <p>
+                                    <strong>Your rights.</strong> You have the right to access the personal data we hold
+                                    about you, to ask us to correct inaccurate data, to ask us to erase data (subject to
+                                    our regulatory retention obligations), to restrict or object to certain processing,
+                                    and to request a copy of your data in a portable format. You also have the right to
+                                    complain to the Information Commissioner's Office (ICO) if you are unhappy with how
+                                    your data has been handled.
+                                </p>
+                                <p class="mb-0 text-muted">
+                                    <em>This is placeholder demonstration content for a final-year university project
+                                    and is not legal advice.</em>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="privacy_agreed" name="privacy_agreed"
+                                   {% if privacy_agreed %}checked{% endif %} required>
+                            <label class="form-check-label" for="privacy_agreed">
+                                I have read and agree to the Privacy Notice.
+                            </label>
+                            <div class="invalid-feedback">Please confirm you have read the Privacy Notice.</div>
                         </div>
                     </section>
 

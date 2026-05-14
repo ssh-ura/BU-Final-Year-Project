@@ -513,16 +513,18 @@ def esign():
 
     if request.method == "POST":
         tob_agreed = request.form.get("tob_agreed") == "on"
+        privacy_agreed = request.form.get("privacy_agreed") == "on"
         fee_agreed = request.form.get("fee_agreed") == "on"
         binding_ack = request.form.get("legally_binding") == "on"
         signature = request.form.get("signature", "").strip()
 
-        if not (tob_agreed and fee_agreed and binding_ack and signature):
+        if not (tob_agreed and privacy_agreed and fee_agreed and binding_ack and signature):
             flash("Please tick every confirmation and type your full name.", "error")
             return render_template(
                 "e-sign.html",
                 signature=signature,
                 tob_agreed=tob_agreed,
+                privacy_agreed=privacy_agreed,
                 fee_agreed=fee_agreed,
                 legally_binding=binding_ack,
             )
@@ -534,7 +536,7 @@ def esign():
             target_type="user",
             target_id=current_user.id,
             typed_name=signature,
-            documents=["Terms of Business", "Fee Agreement"],
+            documents=["Terms of Business", "Privacy Notice", "Fee Agreement"],
         )
         workflow.auto_advance_if_eligible(
             current_user, "under_review", actor=current_user
