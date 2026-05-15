@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Case — {{ client.email }}{% endblock %}
+{% block title %}Case — {{ client.display_name() }}{% endblock %}
 {% block content %}
 {% set stage_badge = {
     "fact_find_in_progress": "secondary",
@@ -14,7 +14,10 @@
 <div class="d-flex align-items-center justify-content-between mb-3">
     <div>
         <a href="{{ url_for('dashboard') }}" class="text-muted small text-decoration-none">← Dashboard</a>
-        <h1 class="mb-0">{{ client.email }}</h1>
+        <h1 class="mb-0">{{ client.display_name() }}</h1>
+        {% if client.first_name and client.last_name %}
+            <p class="text-muted small mb-0">{{ client.email }}</p>
+        {% endif %}
     </div>
     <span class="badge bg-{{ stage_badge.get(summary.stage, 'secondary') }} fs-6">{{ summary.stage_label }}</span>
 </div>

@@ -113,39 +113,66 @@ def register():
     if current_user.is_authenticated:
         return redirect(role_home())
     if request.method == "POST":
+        first_name = request.form.get("first_name", "").strip()
+        last_name = request.form.get("last_name", "").strip()
         email = request.form.get("email", "").strip().lower()
         password = request.form.get("password", "")
         invite_code = request.form.get("invite_code", "").strip()
 
+        if not first_name or not last_name:
+            flash("Please enter your first and last name.", "error")
+            return render_template(
+                "register.html",
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+            )
         if not re.match(r"^[^@\s]+@[^@\s]+\.[^@\s]+$", email):
             flash("Please enter a valid email address.", "error")
-            return render_template("register.html")
+            return render_template(
+                "register.html",
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+            )
         if len(password) < 8:
             flash("Password must be at least 8 characters.", "error")
-            return render_template("register.html")
+            return render_template(
+                "register.html",
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
+            )
 
         adviser_code = os.getenv("ADVISER_CODE", "")
         role = "adviser" if adviser_code and invite_code == adviser_code else "client"
         if User.query.filter_by(email=email).first():
             flash("An account with that email already exists.", "error")
-        else:
-            user = User(email=email, role=role)
-            user.set_password(password)
-            if role == "client":
-                user.case_stage = "fact_find_in_progress"
-                user.stage_updated_at = datetime.now(timezone.utc)
-            db.session.add(user)
-            db.session.flush()
-            audit.log_event(
-                "user_registered",
-                user_id=user.id,
-                target_type="user",
-                target_id=user.id,
-                role=role,
+            return render_template(
+                "register.html",
+                first_name=first_name,
+                last_name=last_name,
+                email=email,
             )
-            db.session.commit()
-            login_user(user)
-            return redirect(role_home())
+        user = User(email=email, role=role, first_name=first_name, last_name=last_name)
+        user.set_password(password)
+        if role == "client":
+            user.case_stage = "fact_find_in_progress"
+            user.stage_updated_at = datetime.now(timezone.utc)
+        db.session.add(user)
+        db.session.flush()
+        audit.log_event(
+            "user_registered",
+            user_id=user.id,
+            target_type="user",
+            target_id=user.id,
+            role=role,
+            first_name=first_name,
+            last_name=last_name,
+        )
+        db.session.commit()
+        login_user(user)
+        return redirect(role_home())
     return render_template("register.html")
 
 

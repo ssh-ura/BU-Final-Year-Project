@@ -24,7 +24,7 @@
                             <div class="card mb-2 shadow-sm">
                                 <div class="card-body p-2">
                                     <a href="{{ url_for('case_detail', user_id=summary.user.id) }}" class="d-block small fw-semibold text-decoration-none">
-                                        {{ summary.user.email }}
+                                        {{ summary.user.display_name() }}
                                     </a>
                                     <div class="small text-muted mb-2">
                                         FF {{ summary.fact_find_percent }}% · Docs {{ summary.docs_uploaded }}/{{ summary.docs_required }}

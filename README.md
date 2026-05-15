@@ -24,6 +24,26 @@ The script is safe to run repeatedly: it checks for the columns before `ALTER TA
 ./venv/bin/python migrate_stages.py
 ```
 
+### `migrate_names.py`
+
+Adds `first_name` and `last_name` columns to the `user` table and fills them for existing users by copying from each user's `FactFind` row where one exists.
+
+**Run it when:**
+
+- You've cloned the repo and you have a pre-existing `instance/mortgage_hive.db` from before names were taken at registration.
+- You've restored `instance/mortgage_hive.db` from a backup before that change.
+
+**You do NOT need to run it when:**
+
+- You've deleted `instance/mortgage_hive.db` the next app start runs `db.create_all()` and creates a fresh table with both columns already present.
+- You're continuing to develop on the existing dev DB the script has already been run against it.
+
+Users with no fact-find (or whose fact-find has no name) are left blank; `User.display_name()` falls back to email until they update.
+
+```
+./venv/bin/python migrate_names.py
+```
+
 ## Run the demo
 
 `seed_demo.py` creates one adviser and four clients spread across the case-stage lifecycle, plus five mortgages spanning every renewal alert band and a believable audit trail. It only touches rows whose email matches `demo_*@example.com`, so any real dev users are left alone.

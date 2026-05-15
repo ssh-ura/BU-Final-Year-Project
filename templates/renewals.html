@@ -52,7 +52,10 @@
                         <tr>
                             <td class="small">
                                 {% if row.client %}
-                                    {{ row.client.email }}
+                                    <div>{{ row.client.display_name() }}</div>
+                                    {% if row.client.first_name and row.client.last_name %}
+                                        <div class="text-muted">{{ row.client.email }}</div>
+                                    {% endif %}
                                 {% else %}
                                     —
                                 {% endif %}

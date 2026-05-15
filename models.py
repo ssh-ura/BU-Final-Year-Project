@@ -9,6 +9,8 @@ class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(150), unique=True, nullable=False)
     password_hash = db.Column(db.String(256), nullable=False)
+    first_name = db.Column(db.String(80))
+    last_name = db.Column(db.String(80))
     role = db.Column(db.String(20), nullable=False, default="client")  # client or adviser
     esigned = db.Column(db.Boolean, default=False)
     case_stage = db.Column(db.String(40))
@@ -20,6 +22,11 @@ class User(UserMixin, db.Model):
 
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
+
+    def display_name(self):
+        if self.first_name and self.last_name:
+            return f"{self.first_name} {self.last_name}"
+        return self.email
 
 
 class FactFind(db.Model):

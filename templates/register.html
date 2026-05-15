@@ -10,9 +10,43 @@
         <div class="card shadow-sm border-0">
             <div class="card-body p-4">
                 <form method="POST" class="needs-validation" novalidate>
+                    <div class="row g-2 mb-3">
+                        <div class="col-sm-6">
+                            <label for="first_name" class="form-label">First name</label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="first_name"
+                                name="first_name"
+                                required
+                                autofocus
+                                value="{% if first_name %}{{ first_name }}{% endif %}"
+                            >
+                            <div class="invalid-feedback">Please enter your first name.</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="last_name" class="form-label">Last name</label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="last_name"
+                                name="last_name"
+                                required
+                                value="{% if last_name %}{{ last_name }}{% endif %}"
+                            >
+                            <div class="invalid-feedback">Please enter your last name.</div>
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label for="email" class="form-label">Email address</label>
-                        <input type="email" class="form-control" id="email" name="email" required autofocus>
+                        <input
+                            type="email"
+                            class="form-control"
+                            id="email"
+                            name="email"
+                            required
+                            value="{% if email %}{{ email }}{% endif %}"
+                        >
                         <div class="invalid-feedback">Please enter a valid email address.</div>
                     </div>
                     <div class="mb-3">

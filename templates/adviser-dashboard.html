@@ -58,7 +58,12 @@
             <tbody>
                 {% for summary in summaries %}
                 <tr>
-                    <td>{{ summary.user.email }}</td>
+                    <td>
+                        <div>{{ summary.user.display_name() }}</div>
+                        {% if summary.user.first_name and summary.user.last_name %}
+                            <div class="small text-muted">{{ summary.user.email }}</div>
+                        {% endif %}
+                    </td>
                     <td><span class="badge bg-{{ stage_badge.get(summary.stage, 'secondary') }}">{{ summary.stage_label }}</span></td>
                     <td>
                         <div class="progress" style="height: 6px; width: 80px;">

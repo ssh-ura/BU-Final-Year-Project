@@ -107,14 +107,14 @@ def reset():
     print(f"  - deleted {len(user_ids)} user(s) + child rows + placeholder files")
 
 
-def make_user(email, role, case_stage, when):
+def make_user(email, first_name, last_name, role, case_stage, when):
     """Create a User and write user_registered. Returns (user, was_created)."""
     existing = User.query.filter_by(email=email).first()
     if existing is not None:
         print(f"  - {email}: already exists, skipping")
         return existing, False
 
-    user = User(email=email, role=role)
+    user = User(email=email, role=role, first_name=first_name, last_name=last_name)
     user.set_password(PASSWORD)
     if role == "client":
         user.case_stage = case_stage
@@ -129,16 +129,18 @@ def make_user(email, role, case_stage, when):
         target_type="user",
         target_id=user.id,
         role=role,
+        first_name=first_name,
+        last_name=last_name,
     )
-    print(f"  + {email} (role={role}, case_stage={case_stage})")
+    print(f"  + {email} ({first_name} {last_name}, role={role}, case_stage={case_stage})")
     return user, True
 
 
 def make_fact_find(user, when):
     fact_find = FactFind(
         user_id=user.id,
-        first_name="Demo",
-        last_name=user.email.split("@")[0].replace(DEMO_EMAIL_PREFIX, "").replace("_", " ").title(),
+        first_name=user.first_name or "Demo",
+        last_name=user.last_name or "Client",
         date_of_birth=datetime(1990, 1, 1).date(),
         phone_number="07000000000",
         current_address="1 Demo Lane, London, EC1A 1AA",
@@ -262,22 +264,28 @@ def seed():
     # 1. Adviser — registered earliest.
     adviser, _ = make_user(
         "demo_adviser@example.com",
+        "Alex",
+        "Carter",
         "adviser",
         case_stage=None,
         when=now - timedelta(days=15),
     )
 
-    # 2. demo_client_new — just registered, no fact-find yet.
+    
     make_user(
         "demo_client_new@example.com",
+        "Sam",
+        "Newman",
         "client",
         case_stage="fact_find_in_progress",
         when=now - timedelta(hours=2),
     )
 
-    # 3. demo_client_docs — fact-find done, no documents yet.
+    
     user, created = make_user(
         "demo_client_docs@example.com",
+        "Priya",
+        "Patel",
         "client",
         case_stage="documents_pending",
         when=now - timedelta(days=3),
@@ -292,9 +300,11 @@ def seed():
             when=now - timedelta(days=3) + timedelta(minutes=31),
         )
 
-    # 4. demo_client_esign — fact-find + all 4 documents, awaiting e-sign.
+    
     user, created = make_user(
         "demo_client_esign@example.com",
+        "Jordan",
+        "Lee",
         "client",
         case_stage="awaiting_esign",
         when=now - timedelta(days=5),
@@ -326,9 +336,10 @@ def seed():
             when=docs_when + timedelta(minutes=11),
         )
 
-    # 5. demo_client_review — full journey + adviser advanced to recommendation_issued.
     user, created = make_user(
         "demo_client_review@example.com",
+        "Casey",
+        "Wright",
         "client",
         case_stage="recommendation_issued",
         when=now - timedelta(days=10),
@@ -370,7 +381,7 @@ def seed():
             user_id=user.id,
             target_type="user",
             target_id=user.id,
-            typed_name="Demo Client Review",
+            typed_name=user.display_name(),
             documents=["Terms of Business", "Privacy Notice", "Fee Agreement"],
         )
         stage_advance_event(
