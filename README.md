@@ -64,7 +64,7 @@ To recreate the demo environment:
    ./venv/bin/python seed_demo.py --reset
    ```
 
-   Re-running without `--reset` is idempotent — already-seeded users are left in place.
+   Re-running without `--reset` is safe to do multiple times as already-seeded users are left in place.
 
 3. Re-run the app:
 
@@ -77,7 +77,7 @@ Credentials (all use password `demo1234`):
 | Role | Email | Lands on |
 |---|---|---|
 | Adviser | `demo_adviser@example.com` | Dashboard with the four demo clients |
-| Client (no fact-find) | `demo_client_new@example.com` | Step 1 — Complete fact-find |
-| Client (no docs) | `demo_client_docs@example.com` | Step 2 — Upload documents |
-| Client (awaiting e-sign) | `demo_client_esign@example.com` | Step 3 — Sign documents |
-| Client (recommendation issued) | `demo_client_review@example.com` | Step 4 — Adviser progress, 5 mortgages |
+| Client (no fact-find) | `demo_client_new@example.com` | Step 1 Complete fact-find |
+| Client (no docs) | `demo_client_docs@example.com` | Step 2 Upload documents |
+| Client (awaiting e-sign) | `demo_client_esign@example.com` | Step 3  Sign documents |
+| Client (recommendation issued) | `demo_client_review@example.com` | Step 4 Adviser progress, 5 mortgages |
