@@ -1176,7 +1176,7 @@ def case_advance(user_id):
 
     db.session.commit()
     flash(f"Stage advanced to {STAGE_LABELS.get(next_stage, next_stage)}.", "success")
-    return redirect(url_for("case_detail", user_id=client.id))
+    return redirect(url_for("workflow_view"))
 
 
 if __name__ == "__main__":
