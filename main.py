@@ -660,13 +660,6 @@ def _case_summary(user):
     }
 
 
-@app.route("/forms")
-@login_required
-@adviser_required
-def forms():
-    return render_template("adviser-forms.html")
-
-
 @app.route("/workflow")
 @login_required
 @adviser_required

@@ -16,7 +16,6 @@
                 {% if current_user.is_authenticated %}
                     {% if current_user.role == "adviser" %}
                         <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-                        <a class="nav-link" href="{{ url_for('forms') }}">Forms</a>
                         <a class="nav-link" href="{{ url_for('workflow_view') }}">Workflow</a>
                         <a class="nav-link" href="{{ url_for('compliance') }}">Audit Log</a>
                         <a class="nav-link" href="{{ url_for('renewals_view') }}">Renewals</a>
