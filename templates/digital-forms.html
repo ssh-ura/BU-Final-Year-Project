@@ -35,13 +35,13 @@
                             <div class="col-md-6">
                                 <label for="first_name" class="form-label">First name</label>
                                 <input type="text" class="form-control" id="first_name" name="first_name"
-                                       value="{% if fact_find %}{{ fact_find.first_name or '' }}{% endif %}" required>
+                                       value="{% if fact_find and fact_find.first_name %}{{ fact_find.first_name }}{% else %}{{ current_user.first_name or '' }}{% endif %}" required>
                                 <div class="invalid-feedback">Please enter your first name.</div>
                             </div>
                             <div class="col-md-6">
                                 <label for="last_name" class="form-label">Last name</label>
                                 <input type="text" class="form-control" id="last_name" name="last_name"
-                                       value="{% if fact_find %}{{ fact_find.last_name or '' }}{% endif %}" required>
+                                       value="{% if fact_find and fact_find.last_name %}{{ fact_find.last_name }}{% else %}{{ current_user.last_name or '' }}{% endif %}" required>
                                 <div class="invalid-feedback">Please enter your last name.</div>
                             </div>
                             <div class="col-md-6">
