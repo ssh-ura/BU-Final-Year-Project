@@ -1,6 +1,14 @@
+# Python
 instance/
 __pycache__/
 *.pyc
+*.pyo
 .env
 venv/
 .venv/
+*.db
+*.sqlite3
+
+# Mac OS    
+.DS_Store
+**/.DS_Store

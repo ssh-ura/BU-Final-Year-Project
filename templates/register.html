@@ -1,5 +1,72 @@
 {% extends "base.html" %}
 {% block title %}Register — Mortgage Hive{% endblock %}
 {% block content %}
-<h1>Register</h1>
+<div class="row justify-content-center align-items-center" style="min-height: 70vh;">
+    <div class="col-sm-8 col-md-5 col-lg-4">
+        <div class="text-center mb-4">
+            <h3 class="fw-bold">Mortgage Hive</h3>
+            <p class="text-muted">Create your account</p>
+        </div>
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <form method="POST" class="needs-validation" novalidate>
+                    <div class="row g-2 mb-3">
+                        <div class="col-sm-6">
+                            <label for="first_name" class="form-label">First name</label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="first_name"
+                                name="first_name"
+                                required
+                                autofocus
+                                value="{% if first_name %}{{ first_name }}{% endif %}"
+                            >
+                            <div class="invalid-feedback">Please enter your first name.</div>
+                        </div>
+                        <div class="col-sm-6">
+                            <label for="last_name" class="form-label">Last name</label>
+                            <input
+                                type="text"
+                                class="form-control"
+                                id="last_name"
+                                name="last_name"
+                                required
+                                value="{% if last_name %}{{ last_name }}{% endif %}"
+                            >
+                            <div class="invalid-feedback">Please enter your last name.</div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="email" class="form-label">Email address</label>
+                        <input
+                            type="email"
+                            class="form-control"
+                            id="email"
+                            name="email"
+                            required
+                            value="{% if email %}{{ email }}{% endif %}"
+                        >
+                        <div class="invalid-feedback">Please enter a valid email address.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                        <div class="invalid-feedback">Please enter a password.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="invite_code" class="form-label">Adviser invite code <span class="text-muted">(optional)</span></label>
+                        <input type="password" class="form-control" id="invite_code" name="invite_code">
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-dark">Create account</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        <p class="text-center mt-3 text-muted small">
+            Already have an account? <a href="{{ url_for('login') }}">Log in</a>
+        </p>
+    </div>
+</div>
 {% endblock %}
