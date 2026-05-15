@@ -1,123 +1,212 @@
 {% extends "base.html" %}
 {% block title %}Client Portal — Mortgage Hive{% endblock %}
 {% block content %}
-<div class="container py-4">
-    <h1 class="mb-4">Welcome {{ current_user.display_name() }}</h1>
-    <div class="row justify-content-center">
-        <div class="col-lg-12">
-            <div class="card mb-3">
-                <div class="card-body">
-                    <h5 class="card-title text-muted small mb-3">Your Next Steps</h5>
-                    {% set steps = [
-                        ("Complete your fact find", "Tell us about yourself, your employment, income, and the property you're looking to purchase.", "Start Fact Find", "fact_find"),
-                        ("Upload your documents", "ID, proof of address, payslips, and bank statements.", "Start Upload", "upload_documents"),
-                        ("Sign your documents", "E-sign your Terms of Business, Privacy Notice, and Fee Agreement.", "Start E-Sign", "esign"),
-                        ("Adviser review", "Your adviser is reviewing your case. Progress will appear below.", "", "")
-                    ] %}
-                    {% for title, description, btn_label, route in steps %}
-                        {% set n = loop.index %}
-                        {% if n < step %}
-                            <div class="p-2 rounded bg-success bg-opacity-10 d-flex justify-content-between align-items-center">
-                                <div>
-                                    <p class="mb-0"><span class="badge rounded-circle bg-success me-2">✓</span>{{ title }}</p>
-                                    <p class="text-muted small mb-0 mt-1">{{ description }}</p>
-                                </div>
-                                <span class="badge bg-success ms-3">Done</span>
-                            </div>
-                        {% elif n == step %}
-                            <div class="p-2 rounded bg-primary bg-opacity-10 d-flex justify-content-between align-items-center">
-                                <div>
-                                    <p class="mb-0"><span class="badge rounded-circle bg-primary me-2">{{ n }}</span>{{ title }}</p>
-                                    <p class="text-muted small mb-0 mt-1">{{ description }}</p>
-                                </div>
-                                {% if btn_label %}
-                                    <a href="{{ url_for(route) }}" class="btn btn-primary btn-sm ms-3">{{ btn_label }}</a>
-                                {% endif %}
-                            </div>
-                        {% else %}
-                            <div class="p-2 rounded opacity-50 d-flex justify-content-between align-items-center">
-                                <div>
-                                    <p class="mb-0"><span class="badge rounded-circle bg-secondary me-2">{{ n }}</span>{{ title }}</p>
-                                    <p class="text-muted small mb-0 mt-1">{{ description }}</p>
-                                </div>
-                                {% if btn_label %}
-                                    <span class="btn btn-outline-secondary btn-sm ms-3 disabled">{{ btn_label }}</span>
-                                {% endif %}
-                            </div>
-                        {% endif %}
-                        {% if not loop.last %}<hr>{% endif %}
-                    {% endfor %}
+<div class="bg-light py-4">
+    <div class="container">
+
+        <nav class="navbar bg-white shadow-sm rounded mb-4 px-4 py-3 d-flex justify-content-between align-items-center">
+            <span class="navbar-brand fw-bold mb-0">Mortgage Hive</span>
+            <div class="text-end">
+                <div class="small text-muted">Signed in as</div>
+                <div class="fw-semibold">{{ current_user.display_name() }}</div>
+            </div>
+        </nav>
+
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="card bg-light h-100">
+                    <div class="card-body">
+                        <div class="small text-muted">Case status</div>
+                        <div class="fw-semibold">
+                            {% if step == 1 %}Fact-find in progress
+                            {% elif step == 2 %}Documents pending
+                            {% elif step == 3 %}Awaiting e-sign
+                            {% else %}With adviser{% endif %}
+                        </div>
+                    </div>
                 </div>
             </div>
-
-            {% if step == 4 %}
-                <div class="card mb-3">
+            <div class="col-md-3">
+                <div class="card bg-light h-100">
                     <div class="card-body">
-                        <h5 class="card-title text-muted small mb-2">Case progress with your adviser</h5>
-                        <p class="mb-3">{{ current_stage_message }}</p>
-                        {% for stage in adviser_stages %}
-                            {% if stage.state == "done" %}
-                                <div class="p-2 rounded bg-success bg-opacity-10 d-flex justify-content-between align-items-center">
-                                    <p class="mb-0"><span class="badge rounded-circle bg-success me-2">✓</span>{{ stage.label }}</p>
-                                    <span class="badge bg-success ms-3">Done</span>
-                                </div>
-                            {% elif stage.state == "current" %}
-                                <div class="p-2 rounded bg-primary bg-opacity-10 d-flex justify-content-between align-items-center">
-                                    <p class="mb-0"><span class="badge rounded-circle bg-primary me-2">{{ loop.index }}</span>{{ stage.label }}</p>
-                                    <span class="badge bg-primary ms-3">In progress</span>
-                                </div>
-                            {% else %}
-                                <div class="p-2 rounded opacity-50 d-flex justify-content-between align-items-center">
-                                    <p class="mb-0"><span class="badge rounded-circle bg-secondary me-2">{{ loop.index }}</span>{{ stage.label }}</p>
-                                </div>
-                            {% endif %}
-                            {% if not loop.last %}<hr>{% endif %}
-                        {% endfor %}
+                        <div class="small text-muted">Documents</div>
+                        <div class="fw-semibold">
+                            {% if step <= 2 %}Pending
+                            {% else %}Complete{% endif %}
+                        </div>
                     </div>
                 </div>
-            {% endif %}
-
-            {% if mortgages %}
-                <div class="card">
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light h-100">
                     <div class="card-body">
-                        <h5 class="card-title text-muted small mb-3">Your existing mortgages</h5>
-                        <ul class="list-group list-group-flush">
-                            {% for row in mortgages %}
-                                <li class="list-group-item px-0">
-                                    <div class="d-flex justify-content-between align-items-start">
-                                        <div>
-                                            <div class="fw-semibold small">
-                                                {{ row.mortgage.lender_name }}
-                                                {% if row.mortgage.product_name %}
-                                                    {{ row.mortgage.product_name }}
-                                                {% endif %}
+                        <div class="small text-muted">E-signature</div>
+                        <div class="fw-semibold">
+                            {% if current_user.esigned %}Signed
+                            {% else %}Not signed{% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-light h-100">
+                    <div class="card-body">
+                        <div class="small text-muted">Estimated completion</div>
+                        <div class="fw-semibold">{{ (((step - 1) / 4) * 100) | int }}%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm mb-4">
+            <div class="card-body">
+                <h5 class="card-title text-muted small mb-3">Your Next Steps</h5>
+                {% set steps = [
+                    ("Complete your fact find", "Tell us about yourself, your employment, income, and the property you're looking to purchase.", "Start Fact Find", "fact_find"),
+                    ("Upload your documents", "ID, proof of address, payslips, and bank statements.", "Start Upload", "upload_documents"),
+                    ("Sign your documents", "E-sign your Terms of Business, Privacy Notice, and Fee Agreement.", "Start E-Sign", "esign"),
+                    ("Adviser review", "Your adviser is reviewing your case. Progress will appear below.", "", "")
+                ] %}
+                {% for title, description, btn_label, route in steps %}
+                    {% set n = loop.index %}
+                    {% if n < step %}
+                        <div class="border-start border-success border-3 bg-success bg-opacity-10 p-3 mb-2 rounded d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="d-inline-flex align-items-center justify-content-center bg-success text-white rounded-circle flex-shrink-0" style="width: 32px; height: 32px;">✓</span>
+                                <div>
+                                    <p class="mb-0 fw-semibold">{{ title }}</p>
+                                    <p class="text-muted small mb-0 mt-1">{{ description }}</p>
+                                </div>
+                            </div>
+                            <span class="badge bg-success ms-3">Done</span>
+                        </div>
+                    {% elif n == step %}
+                        <div class="border-start border-primary border-3 bg-primary bg-opacity-10 p-3 mb-2 rounded d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-circle flex-shrink-0" style="width: 32px; height: 32px;">{{ n }}</span>
+                                <div>
+                                    <p class="mb-0 fw-semibold">{{ title }}</p>
+                                    <p class="text-muted small mb-0 mt-1">{{ description }}</p>
+                                </div>
+                            </div>
+                            {% if btn_label %}
+                                <a href="{{ url_for(route) }}" class="btn btn-primary btn-sm ms-3">{{ btn_label }}</a>
+                            {% endif %}
+                        </div>
+                    {% else %}
+                        <div class="border-start border-secondary border-3 opacity-50 p-3 mb-2 rounded d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center gap-3">
+                                <span class="d-inline-flex align-items-center justify-content-center bg-secondary text-white rounded-circle flex-shrink-0" style="width: 32px; height: 32px;">{{ n }}</span>
+                                <div>
+                                    <p class="mb-0 fw-semibold">{{ title }}</p>
+                                    <p class="text-muted small mb-0 mt-1">{{ description }}</p>
+                                </div>
+                            </div>
+                            {% if btn_label %}
+                                <span class="btn btn-outline-secondary btn-sm ms-3 disabled">{{ btn_label }}</span>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                {% if mortgages %}
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="card-title text-muted small mb-3">Documents — your existing mortgages</h5>
+                            <ul class="list-group list-group-flush">
+                                {% for row in mortgages %}
+                                    <li class="list-group-item px-0">
+                                        <div class="d-flex justify-content-between align-items-start">
+                                            <div>
+                                                <div class="fw-semibold small">
+                                                    {{ row.mortgage.lender_name }}
+                                                    {% if row.mortgage.product_name %}
+                                                        {{ row.mortgage.product_name }}
+                                                    {% endif %}
+                                                </div>
+                                                <div class="small text-muted">
+                                                    {{ row.mortgage.rate_type }}
+                                                    {% if row.mortgage.rate_pct is not none %}
+                                                        · {{ row.mortgage.rate_pct }}%
+                                                    {% endif %}
+                                                    · deal ends {{ row.mortgage.deal_end_date.isoformat() }}
+                                                </div>
                                             </div>
-                                            <div class="small text-muted">
-                                                {{ row.mortgage.rate_type }}
-                                                {% if row.mortgage.rate_pct is not none %}
-                                                    · {{ row.mortgage.rate_pct }}%
-                                                {% endif %}
-                                                · deal ends {{ row.mortgage.deal_end_date.isoformat() }}
+                                            <div class="text-end">
+                                                <span class="badge bg-{{ row.band_badge }}">{{ row.band_label }}</span>
+                                                <div class="small text-muted mt-1">
+                                                    {% if row.days_remaining < 0 %}
+                                                        expired {{ -row.days_remaining }} day{% if -row.days_remaining != 1 %}s{% endif %} ago
+                                                    {% else %}
+                                                        {{ row.days_remaining }} day{% if row.days_remaining != 1 %}s{% endif %} remaining
+                                                    {% endif %}
+                                                </div>
                                             </div>
                                         </div>
-                                        <div class="text-end">
-                                            <span class="badge bg-{{ row.band_badge }}">{{ row.band_label }}</span>
-                                            <div class="small text-muted mt-1">
-                                                {% if row.days_remaining < 0 %}
-                                                    expired {{ -row.days_remaining }} day{% if -row.days_remaining != 1 %}s{% endif %} ago
-                                                {% else %}
-                                                    {{ row.days_remaining }} day{% if row.days_remaining != 1 %}s{% endif %} remaining
-                                                {% endif %}
-                                            </div>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="card-title text-muted small mb-3">Documents</h5>
+                            <p class="text-muted small mb-0">No existing mortgages on file.</p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="col-md-6">
+                {% if step == 4 %}
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="card-title text-muted small mb-2">Notifications — case progress with your adviser</h5>
+                            <p class="mb-3">{{ current_stage_message }}</p>
+                            {% for stage in adviser_stages %}
+                                {% if stage.state == "done" %}
+                                    <div class="border-start border-success border-3 bg-success bg-opacity-10 p-3 mb-2 rounded d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <span class="d-inline-flex align-items-center justify-content-center bg-success text-white rounded-circle flex-shrink-0" style="width: 32px; height: 32px;">✓</span>
+                                            <p class="mb-0 fw-semibold">{{ stage.label }}</p>
+                                        </div>
+                                        <span class="badge bg-success ms-3">Done</span>
+                                    </div>
+                                {% elif stage.state == "current" %}
+                                    <div class="border-start border-primary border-3 bg-primary bg-opacity-10 p-3 mb-2 rounded d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <span class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-circle flex-shrink-0" style="width: 32px; height: 32px;">{{ loop.index }}</span>
+                                            <p class="mb-0 fw-semibold">{{ stage.label }}</p>
+                                        </div>
+                                        <span class="badge bg-primary ms-3">In progress</span>
+                                    </div>
+                                {% else %}
+                                    <div class="border-start border-secondary border-3 opacity-50 p-3 mb-2 rounded d-flex justify-content-between align-items-center">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <span class="d-inline-flex align-items-center justify-content-center bg-secondary text-white rounded-circle flex-shrink-0" style="width: 32px; height: 32px;">{{ loop.index }}</span>
+                                            <p class="mb-0 fw-semibold">{{ stage.label }}</p>
                                         </div>
                                     </div>
-                                </li>
+                                {% endif %}
                             {% endfor %}
-                        </ul>
+                        </div>
                     </div>
-                </div>
-            {% endif %}
+                {% else %}
+                    <div class="card shadow-sm h-100">
+                        <div class="card-body">
+                            <h5 class="card-title text-muted small mb-3">Notifications</h5>
+                            <p class="text-muted small mb-0">Notifications from your adviser will appear here once your case is under review.</p>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
         </div>
+
     </div>
 </div>
 {% endblock %}
