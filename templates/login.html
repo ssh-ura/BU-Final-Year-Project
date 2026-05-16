@@ -1,15 +1,32 @@
 {% extends "base.html" %}
 {% block title %}Login — Mortgage Hive{% endblock %}
 {% block navbar %}{% endblock %}
-{% block content %}
-<div class="row justify-content-center align-items-center" style="min-height: 85vh;">
-    <div class="col-sm-8 col-md-5 col-lg-4">
-        <div class="text-center mb-4">
-            <h3 class="fw-bold">Mortgage Hive</h3>
-            <p class="text-muted">Sign in to your account</p>
+{% block main %}
+<main class="d-flex flex-column flex-md-row" style="min-height: 100vh;">
+
+    <div class="bg-white d-flex flex-column" style="width: 45%; min-width: 320px;">
+        <div class="d-flex align-items-center gap-2 p-4">
+            <span class="app-logo-tile">
+                <svg width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                    <path d="M22,12 L17,20.66 L7,20.66 L2,12 L7,3.34 L17,3.34 Z" fill="#ffffff"/>
+                </svg>
+            </span>
+            <span class="app-brand-text">Mortgage Hive</span>
         </div>
-        <div class="card shadow-sm border-0">
-            <div class="card-body p-4">
+
+        <div class="flex-grow-1 d-flex align-items-center justify-content-center px-4 pb-5">
+            <div class="w-100" style="max-width: 360px;">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ 'danger' if category == 'error' else 'success' }}" role="alert">
+                            {{ message }}
+                        </div>
+                    {% endfor %}
+                {% endwith %}
+
+                <h1 class="mb-1 login-heading">Welcome</h1>
+                <p class="text-muted mb-4">Please enter your details</p>
+
                 <form method="POST" class="needs-validation" novalidate>
                     <div class="mb-3">
                         <label for="email" class="form-label">Email address</label>
@@ -21,15 +38,33 @@
                         <input type="password" class="form-control" id="password" name="password" required>
                         <div class="invalid-feedback">Please enter your password.</div>
                     </div>
-                    <div class="d-grid">
-                        <button type="submit" class="btn btn-dark">Log in</button>
+                    <div class="d-grid mb-3">
+                        <button type="submit" class="btn btn-slate">Sign in</button>
                     </div>
                 </form>
+
+                <p class="text-center text-muted small mb-0">
+                    Don't have an account? <a href="{{ url_for('register') }}" class="text-slate">Register</a>
+                </p>
             </div>
         </div>
-        <p class="text-center mt-3 text-muted small">
-            Don't have an account? <a href="{{ url_for('register') }}">Register</a>
-        </p>
     </div>
-</div>
+
+    <div class="d-none d-md-flex flex-grow-1 align-items-center justify-content-center login-illustration">
+        <svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg" style="max-width: 60%; height: auto;" aria-hidden="true">
+            <defs>
+                <symbol id="hex-shape" viewBox="0 0 24 24">
+                    <path d="M22,12 L17,20.66 L7,20.66 L2,12 L7,3.34 L17,3.34 Z"/>
+                </symbol>
+            </defs>
+            <use href="#hex-shape" x="80"  y="60"  width="120" height="120" fill="#444441"/>
+            <use href="#hex-shape" x="200" y="40"  width="120" height="120" fill="#888888"/>
+            <use href="#hex-shape" x="200" y="190" width="120" height="120" fill="#444441" opacity="0.7"/>
+            <use href="#hex-shape" x="80"  y="190" width="120" height="120" fill="#888888" opacity="0.55"/>
+            <use href="#hex-shape" x="160" y="280" width="80"  height="80"  fill="#444441"/>
+            <use href="#hex-shape" x="40"  y="290" width="60"  height="60"  fill="#888888" opacity="0.5"/>
+        </svg>
+    </div>
+
+</main>
 {% endblock %}

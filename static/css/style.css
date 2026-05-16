@@ -62,3 +62,25 @@ body {
 .text-slate {
     color: #444441;
 }
+
+.login-heading {
+    font-weight: 500;
+    font-size: 2rem;
+}
+
+.login-illustration {
+    background-color: #F1EFE8;
+}
+
+.btn-slate {
+    background-color: #444441;
+    color: #ffffff;
+    border-color: #444441;
+}
+
+.btn-slate:hover,
+.btn-slate:focus {
+    background-color: #2d2d2b;
+    color: #ffffff;
+    border-color: #2d2d2b;
+}
