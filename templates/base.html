@@ -9,30 +9,60 @@
 </head>
 <body>
     {% block navbar %}
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand fw-semibold" href="{{ url_for('index') }}">Mortgage Hive</a>
-            <div class="navbar-nav ms-auto">
-                {% if current_user.is_authenticated %}
-                    {% if current_user.role == "adviser" %}
-                        <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-                        <a class="nav-link" href="{{ url_for('forms') }}">Forms</a>
-                        <a class="nav-link" href="{{ url_for('workflow_view') }}">Workflow</a>
-                        <a class="nav-link" href="{{ url_for('compliance') }}">Audit Log</a>
-                        <a class="nav-link" href="{{ url_for('renewals_view') }}">Renewals</a>
-                    {% else %}
-                        <a class="nav-link" href="{{ url_for('portal') }}">My Portal</a>
-                    {% endif %}
-                    <a class="nav-link" href="{{ url_for('logout') }}">Log out</a>
+    <nav class="navbar navbar-expand-lg app-navbar">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('index') }}">
+                <span class="app-logo-tile">
+                    <svg width="14" height="14" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                        <path d="M22,12 L17,20.66 L7,20.66 L2,12 L7,3.34 L17,3.34 Z" fill="#ffffff"/>
+                    </svg>
+                </span>
+                <span class="app-brand-text">Mortgage Hive</span>
+            </a>
+
+            {% if current_user.is_authenticated %}
+                {% if current_user.role == "adviser" %}
+                    {% set nav_links = [("dashboard", "Dashboard"), ("workflow_view", "Workflow"), ("compliance", "Audit Log"), ("renewals_view", "Renewals")] %}
                 {% else %}
-                    <a class="nav-link" href="{{ url_for('login') }}">Log in</a>
-                    <a class="nav-link" href="{{ url_for('register') }}">Register</a>
+                    {% set nav_links = [("portal", "My Portal")] %}
                 {% endif %}
-            </div>
+
+                <ul class="navbar-nav mx-auto mb-2 mb-lg-0">
+                    {% for endpoint, label in nav_links %}
+                        <li class="nav-item">
+                            {% if request.endpoint == endpoint %}
+                                <a class="nav-link px-3 py-1 mx-1 rounded nav-pill active"
+                                   href="{{ url_for(endpoint) }}">{{ label }}</a>
+                            {% else %}
+                                <a class="nav-link px-3 py-1 mx-1 rounded nav-pill"
+                                   href="{{ url_for(endpoint) }}">{{ label }}</a>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+
+                {% if current_user.first_name and current_user.last_name %}
+                    {% set initials = (current_user.first_name[0] ~ current_user.last_name[0]) | upper %}
+                {% else %}
+                    {% set initials = current_user.email[0] | upper %}
+                {% endif %}
+
+                <div class="d-flex align-items-center gap-2">
+                    <span class="app-avatar">{{ initials }}</span>
+                    <span class="small text-slate">{{ current_user.display_name() }}</span>
+                    <a class="nav-link ms-2 text-slate" href="{{ url_for('logout') }}">Log out</a>
+                </div>
+            {% else %}
+                <div class="d-flex ms-auto">
+                    <a class="nav-link text-slate" href="{{ url_for('login') }}">Log in</a>
+                    <a class="nav-link ms-2 text-slate" href="{{ url_for('register') }}">Register</a>
+                </div>
+            {% endif %}
         </div>
     </nav>
     {% endblock %}
 
+    {% block main %}
     <main class="container my-4">
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% for category, message in messages %}
@@ -45,6 +75,7 @@
 
         {% block content %}{% endblock %}
     </main>
+    {% endblock %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
