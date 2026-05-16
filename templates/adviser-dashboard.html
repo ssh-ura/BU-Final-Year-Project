@@ -67,7 +67,7 @@
                     <td><span class="badge bg-{{ stage_badge.get(summary.stage, 'secondary') }}">{{ summary.stage_label }}</span></td>
                     <td>
                         <div class="progress" style="height: 6px; width: 80px;">
-                            <div class="progress-bar" role="progressbar" style="width: {{ summary.fact_find_percent }}%"></div>
+                            <div class="progress-bar fact-find-progress" role="progressbar" data-percent="{{ summary.fact_find_percent }}"></div>
                         </div>
                         <span class="small text-muted">{{ summary.fact_find_percent }}%</span>
                     </td>
