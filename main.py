@@ -233,9 +233,12 @@ def portal():
     else:
         current_stage_index = -1
 
+    is_terminal = current_stage == "completed"
     adviser_stages = []
     for index, stage_key in enumerate(ADVISER_STAGE_ORDER):
-        if index < current_stage_index:
+        if is_terminal:
+            state = "done"
+        elif index < current_stage_index:
             state = "done"
         elif index == current_stage_index:
             state = "current"
