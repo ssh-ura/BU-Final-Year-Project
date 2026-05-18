@@ -267,9 +267,15 @@ def portal():
     for mortgage in mortgage_rows:
         mortgages.append(renewals.mortgage_summary(mortgage, today))
 
+    if current_stage == "completed":
+        completion_pct = 100
+    else:
+        completion_pct = int(((step - 1) / 4) * 100)
+
     return render_template(
         "client-portal.html",
         step=step,
+        completion_pct=completion_pct,
         adviser_stages=adviser_stages,
         current_stage_message=current_stage_message,
         mortgages=mortgages,
